@@ -6,12 +6,17 @@
     <title>CookieCut</title>
 </head>
 <body>
-    <img id="userImagePreview">
-    <input type="file" id="userImageUpload" accept="image/*">
-    <script>
-        const imagePreview = document.getElementById("userImagePreview");
-        const imageUpload = document.getElementById("userImageUpload");
+    <script type="module" src="./cookiecut.js"></script>
+    <script type="module">
+        import * as cc from './cookiecut.js';
 
+        const image = document.getElementById("userImage");
+        const imageUpload = document.getElementById("userImageUpload");
+        const canvas = document.getElementById("canvas");
+
+        // TODO check for WebGL support and fail clearly to user
+
+        cc.init(canvas);
         imageUpload.addEventListener("change", onImageUpload);
 
         function onImageUpload() {
@@ -19,16 +24,21 @@
             if (len == 1 && this.files[0].type.startsWith("image/")) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    imagePreview.src = e.target.result;
+                    image.src = e.target.result;
+                    cc.setImage(image);
                 };
+                // TODO handle read failure
                 reader.readAsDataURL(this.files[0]);
             } else {
-                imagePreview.src = '';
+                image.src = '';
                 if (len > 1) {
                     console.error("unexpected file upload count " + len);
                 }
             }
         }
     </script>
+    <img id="userImage">
+    <input type="file" id="userImageUpload" accept="image/*">
+    <canvas id="canvas"></canvas>
 </body>
 </html>
