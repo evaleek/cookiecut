@@ -6,20 +6,27 @@
     <title>CookieCut</title>
 </head>
 <body>
-    <input type="file" id="userImage" accept="image/*">
+    <img id="userImagePreview">
+    <input type="file" id="userImageUpload" accept="image/*">
     <script>
-        const imageUpload = document.getElementById("userImage");
+        const imagePreview = document.getElementById("userImagePreview");
+        const imageUpload = document.getElementById("userImageUpload");
+
         imageUpload.addEventListener("change", onImageUpload);
 
         function onImageUpload() {
             const len = this.files.length;
-            if (len == 1) {
-                const file = this.files[0];
-                if (file.type.startsWith("image/")) {
-                    console.info("file is image");
+            if (len == 1 && this.files[0].type.startsWith("image/")) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                };
+                reader.readAsDataURL(this.files[0]);
+            } else {
+                imagePreview.src = '';
+                if (len > 1) {
+                    console.error("unexpected file upload count " + len);
                 }
-            } else if (len > 1) {
-                console.error("unexpected file upload count " + len);
             }
         }
     </script>
