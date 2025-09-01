@@ -6,6 +6,22 @@
     <title>CookieCut</title>
 </head>
 <body>
-    Hi
+    <input type="file" id="userImage" accept="image/*">
+    <script>
+        const imageUpload = document.getElementById("userImage");
+        imageUpload.addEventListener("change", onImageUpload);
+
+        function onImageUpload() {
+            const len = this.files.length;
+            if (len == 1) {
+                const file = this.files[0];
+                if (file.type.startsWith("image/")) {
+                    console.info("file is image");
+                }
+            } else if (len > 1) {
+                console.error("unexpected file upload count " + len);
+            }
+        }
+    </script>
 </body>
 </html>
