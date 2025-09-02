@@ -16,11 +16,14 @@ const vertexSource = `
 const fragmentSource = `
     precision mediump float;
     varying vec2 texCoord;
+    uniform vec2 cellSize;
     uniform sampler2D image;
     void main() {
-        gl_FragColor = texture2D(image, texCoord);
+        vec2 cell = floor(texCoord/cellSize);
+        gl_FragColor = vec4(cell*cellSize, 0, 1);
+        //gl_FragColor = texture2D(image, texCoord);
     }
-`;
+`
 
 export const supported = () => typeof WebGLRenderingContext !== 'undefined';
 
@@ -85,6 +88,13 @@ function processImage() {
         gl.canvas.width = paddedWidth;
         gl.canvas.height = paddedHeight;
         gl.viewport(0, 0, paddedWidth, paddedHeight);
+
+        // To the shader, specify cell size as
+        // a fraction of the texture coordinate.
+        gl.uniform2f(gl.getUniformLocation(program, "cellSize"),
+            cellSize / paddedWidth,
+            cellSize / paddedHeight,
+        );
 
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, userImage);
 
