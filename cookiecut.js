@@ -2,6 +2,7 @@ let gl;
 let program;
 let texture;
 let cellSize = 8;
+let userImage;
 
 const vertexSource = `
     attribute vec2 coord;
@@ -58,27 +59,34 @@ export function setCellSize(size) {
     if (asNumber) {
         if (asNumber >= 4 && Number.isInteger(asNumber)) {
             cellSize = asNumber;
-            console.log("set to " + size);
         } else {
             const fit = Math.max(4, Math.round(asNumber));
             console.warn('unexpected cell size input value "' + size + '" rounded to ' + fit);
             cellSize = fit;
         }
+        processImage();
     } else {
         throw new Error('uncastable cell size input "' + size + '"');
     }
 }
 
 export function setImage(image) {
-    if (image) {
-        const width = image.naturalWidth;
-        const height = image.naturalHeight;
+    userImage = image;
+    processImage();
+}
 
-        gl.canvas.width = width;
-        gl.canvas.height = height;
-        gl.viewport(0, 0, width, height);
+function processImage() {
+    if (userImage) {
+        const width = userImage.naturalWidth;
+        const height = userImage.naturalHeight;
+        const paddedWidth = Math.ceil(width/cellSize)*cellSize;
+        const paddedHeight = Math.ceil(height/cellSize)*cellSize;
 
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.canvas.width = paddedWidth;
+        gl.canvas.height = paddedHeight;
+        gl.viewport(0, 0, paddedWidth, paddedHeight);
+
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, userImage);
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
