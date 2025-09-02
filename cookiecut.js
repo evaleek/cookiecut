@@ -1,7 +1,8 @@
 let gl;
-let program;
+let canvasDCTProgram;
 let texCoordBuffer;
-let texture;
+let imageTexture;
+let imageDCT;
 let cellSize = 8;
 let userImage;
 
@@ -59,12 +60,13 @@ export function init(canvas) {
         1.0, 1.0,
     ]), gl.STATIC_DRAW);
 
-    texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    imageTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, imageTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
 
     gl.clearColor(0, 0, 0, 0);
 }
@@ -99,22 +101,41 @@ export function refresh() {
         gl.canvas.height = height;
         gl.viewport(0, 0, width, height);
 
-        program = compileShaders(flatSampleVertexSource, dctFragmentSource(
-            cellSize, cellSize, width, height));
-        gl.useProgram(program);
+        canvasDCTProgram = compileShaders(
+            flatSampleVertexSource,
+            dctFragmentSource(cellSize, cellSize, width, height),
+        );
+        gl.useProgram(canvasDCTProgram);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-        const texCoordAttrib = gl.getAttribLocation(program, "coord");
+        const texCoordAttrib = gl.getAttribLocation(canvasDCTProgram, "coord");
         gl.enableVertexAttribArray(texCoordAttrib);
         gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
 
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+        imageDCT = new Uint8Array(width*height*4);
+
+        const imageDctTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, imageDctTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height,
+            0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        const framebuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+            gl.TEXTURE_2D, imageDctTexture, 0);
+
+        gl.bindTexture(gl.TEXTURE_2D, imageTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, userImage);
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
-    } else {
-        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, imageDCT);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 }
 
