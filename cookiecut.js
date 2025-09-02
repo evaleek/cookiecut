@@ -94,6 +94,10 @@ export function setImage(image) {
 
 export function refresh() {
     if (userImage) {
+        if (cellSize < 4 || !Number.isInteger(cellSize)) {
+            throw new Error("unexpected cellSize value " + cellSize);
+        }
+
         const width = Math.ceil(userImage.naturalWidth/cellSize)*cellSize;
         const height = Math.ceil(userImage.naturalHeight/cellSize)*cellSize;
 
