@@ -1,6 +1,7 @@
 let gl;
 let program;
 let texture;
+let cellSize = 8;
 
 const vertexSource = `
     attribute vec2 coord;
@@ -50,6 +51,22 @@ export function init(canvas) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+
+export function setCellSize(size) {
+    const asNumber = Number(size);
+    if (asNumber) {
+        if (asNumber >= 4 && Number.isInteger(asNumber)) {
+            cellSize = asNumber;
+            console.log("set to " + size);
+        } else {
+            const fit = Math.max(4, Math.round(asNumber));
+            console.warn('unexpected cell size input value "' + size + '" rounded to ' + fit);
+            cellSize = fit;
+        }
+    } else {
+        throw new Error('uncastable cell size input "' + size + '"');
+    }
 }
 
 export function setImage(image) {

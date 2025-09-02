@@ -12,12 +12,17 @@
 
         const image = document.getElementById("userImage");
         const imageUpload = document.getElementById("userImageUpload");
+        const cellSize = document.getElementById("cellSize");
         const canvas = document.getElementById("canvas");
 
         // TODO check for WebGL support and fail clearly to user
 
         cc.init(canvas);
+        cc.setCellSize(cellSize.value);
         imageUpload.addEventListener("change", onImageUpload);
+        cellSize.addEventListener("change", (e) => {
+            cc.setCellSize(e.target.value);
+        });
 
         function onImageUpload() {
             const len = this.files.length;
@@ -41,6 +46,7 @@
         }
     </script>
     <img id="userImage">
+    <input type="number" id="cellSize" min="4" step="1" value="8">
     <input type="file" id="userImageUpload" accept="image/*">
     <canvas id="canvas"></canvas>
 </body>
