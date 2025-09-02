@@ -65,6 +65,11 @@ export function setImage(image) {
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
+    } else {
+        gl.canvas.width = 1;
+        gl.canvas.height = 1;
+        gl.viewport(0, 0, 1, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
     }
 }
 
