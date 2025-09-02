@@ -1,5 +1,6 @@
 let gl;
 let program;
+let texCoordBuffer;
 let texture;
 let cellSize = 8;
 let userImage;
@@ -13,14 +14,14 @@ const flatSampleVertexSource = `
     }
 `;
 
-const dctFragmentSource = `
+const dctFragmentSource = (cellWidth, cellHeight, canvasWidth, canvasHeight) => `
     precision mediump float;
     varying vec2 texCoord;
-    uniform vec2 pixelSize;
-    uniform vec2 cellSize;
     uniform sampler2D image;
+    const vec2 cellPixelSize = vec2(${cellWidth}, ${cellHeight});
+    const vec2 pixelSize = vec2(${1.0/canvasWidth}, ${1.0/canvasHeight});
+    const vec2 cellSize = vec2(${cellWidth/canvasWidth}, ${cellHeight/canvasHeight});
     void main() {
-        vec2 cellPixelSize = cellSize/pixelSize;
         vec2 cell = floor(texCoord/cellSize);
         vec2 cellBase = cell*cellSize;
         vec2 freqUV = (texCoord-cellBase)/pixelSize;
@@ -47,12 +48,7 @@ export function init(canvas) {
     gl = canvas.getContext("webgl");
     if (!gl) throw new Error("Could not initialize WebGL.");
 
-    program = compileShaders(flatSampleVertexSource, dctFragmentSource);
-    gl.useProgram(program);
-    gl.clearColor(0, 0, 0, 0);
-
-    const texCoordAttrib = gl.getAttribLocation(program, "coord");
-    const texCoordBuffer = gl.createBuffer();
+    texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
         0.0, 0.0,
@@ -62,8 +58,6 @@ export function init(canvas) {
         1.0, 0.0,
         1.0, 1.0,
     ]), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(texCoordAttrib);
-    gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
 
     texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -71,6 +65,8 @@ export function init(canvas) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.clearColor(0, 0, 0, 0);
 }
 
 export function setCellSize(size) {
@@ -83,7 +79,7 @@ export function setCellSize(size) {
             console.warn('unexpected cell size input value "' + size + '" rounded to ' + fit);
             cellSize = fit;
         }
-        processImage();
+        refresh();
     } else {
         throw new Error('uncastable cell size input "' + size + '"');
     }
@@ -91,37 +87,33 @@ export function setCellSize(size) {
 
 export function setImage(image) {
     userImage = image;
-    processImage();
+    refresh();
 }
 
-function processImage() {
+export function refresh() {
     if (userImage) {
-        const width = userImage.naturalWidth;
-        const height = userImage.naturalHeight;
-        const paddedWidth = Math.ceil(width/cellSize)*cellSize;
-        const paddedHeight = Math.ceil(height/cellSize)*cellSize;
+        const width = Math.ceil(userImage.naturalWidth/cellSize)*cellSize;
+        const height = Math.ceil(userImage.naturalHeight/cellSize)*cellSize;
 
-        gl.canvas.width = paddedWidth;
-        gl.canvas.height = paddedHeight;
-        gl.viewport(0, 0, paddedWidth, paddedHeight);
+        gl.canvas.width = width;
+        gl.canvas.height = height;
+        gl.viewport(0, 0, width, height);
 
-        gl.uniform2f(gl.getUniformLocation(program, "pixelSize"),
-            1.0 / paddedWidth,
-            1.0 / paddedHeight,
-        );
-        gl.uniform2f(gl.getUniformLocation(program, "cellSize"),
-            cellSize / paddedWidth,
-            cellSize / paddedHeight,
-        );
+        program = compileShaders(flatSampleVertexSource, dctFragmentSource(
+            cellSize, cellSize, width, height));
+        gl.useProgram(program);
 
+        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+        const texCoordAttrib = gl.getAttribLocation(program, "coord");
+        gl.enableVertexAttribArray(texCoordAttrib);
+        gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, userImage);
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     } else {
-        gl.canvas.width = 1;
-        gl.canvas.height = 1;
-        gl.viewport(0, 0, 1, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
     }
 }

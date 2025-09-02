@@ -32,6 +32,7 @@
                     image.src = e.target.result;
                     image.onload = function() {
                         cc.setImage(image);
+                        canvas.style.display = "inline";
                     };
                 };
                 // TODO handle read failure
@@ -39,6 +40,7 @@
             } else {
                 image.src = '';
                 cc.setImage(null);
+                canvas.style.display = "none";
                 if (len > 1) {
                     console.error("unexpected file upload count " + len);
                 }
