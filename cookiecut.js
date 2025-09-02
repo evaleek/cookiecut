@@ -4,7 +4,7 @@ let texture;
 let cellSize = 8;
 let userImage;
 
-const vertexSource = `
+const flatSampleVertexSource = `
     attribute vec2 coord;
     varying vec2 texCoord;
     void main() {
@@ -13,15 +13,31 @@ const vertexSource = `
     }
 `;
 
-const fragmentSource = `
+const dctFragmentSource = `
     precision mediump float;
     varying vec2 texCoord;
+    uniform vec2 pixelSize;
     uniform vec2 cellSize;
     uniform sampler2D image;
     void main() {
+        vec2 cellPixelSize = cellSize/pixelSize;
         vec2 cell = floor(texCoord/cellSize);
-        gl_FragColor = vec4(cell*cellSize, 0, 1);
-        //gl_FragColor = texture2D(image, texCoord);
+        vec2 cellBase = cell*cellSize;
+        vec2 freqUV = (texCoord-cellBase)/pixelSize;
+        float dct = 0.0;
+        for (float cellPixelX = 0.0; cellPixelX < cellPixelSize.x; cellPixelX += 1.0) {
+            for (float cellPixelY = 0.0; cellPixelY < cellPixelSize.y; cellPixelY += 1.0) {
+                vec2 cellPixel = vec2(cellPixelX, cellPixelY);
+                float pixelValue = length(texture2D(image,
+                    cellPixel * pixelSize + cellBase)) * 0.5;
+                vec2 dctXY = pixelValue * cos(
+                    (vec2(3.1415926538)/cellPixelSize)
+                    * (cellPixel+0.5)
+                    * freqUV);
+                dct += dctXY.x + dctXY.y;
+            }
+        }
+        gl_FragColor = vec4(dct, 0, 0, 1);
     }
 `
 
@@ -31,7 +47,7 @@ export function init(canvas) {
     gl = canvas.getContext("webgl");
     if (!gl) throw new Error("Could not initialize WebGL.");
 
-    program = compileShaders(vertexSource, fragmentSource);
+    program = compileShaders(flatSampleVertexSource, dctFragmentSource);
     gl.useProgram(program);
     gl.clearColor(0, 0, 0, 0);
 
@@ -89,8 +105,10 @@ function processImage() {
         gl.canvas.height = paddedHeight;
         gl.viewport(0, 0, paddedWidth, paddedHeight);
 
-        // To the shader, specify cell size as
-        // a fraction of the texture coordinate.
+        gl.uniform2f(gl.getUniformLocation(program, "pixelSize"),
+            1.0 / paddedWidth,
+            1.0 / paddedHeight,
+        );
         gl.uniform2f(gl.getUniformLocation(program, "cellSize"),
             cellSize / paddedWidth,
             cellSize / paddedHeight,
