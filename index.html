@@ -25,12 +25,15 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     image.src = e.target.result;
-                    cc.setImage(image);
+                    image.onload = function() {
+                        cc.setImage(image);
+                    };
                 };
                 // TODO handle read failure
                 reader.readAsDataURL(this.files[0]);
             } else {
                 image.src = '';
+                cc.setImage(null);
                 if (len > 1) {
                     console.error("unexpected file upload count " + len);
                 }
