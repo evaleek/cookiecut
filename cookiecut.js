@@ -217,6 +217,59 @@ export function refresh() {
     }
 }
 
+export function computeGlyphs(atlasWidth, atlasHeight, cellSize, characters) {
+    for (const character of characters) {
+        if (character.length != 1 || typeof character !== 'string')
+            throw new Error("character parameter was not a length-1 string");
+    }
+    if (!glyphContext)
+        throw new Error("glyph canvas context was uninitialized");
+
+    if (atlasWidth % cellSize !== 0 || atlasHeight % cellSize !== 0)
+        throw new Error(`atlas size ${atlasWidth},${atlasHeight}`
+            + `not a factor of cell size ${cellSize},${cellSize}`);
+
+    const atlasCellWidth = atlasWidth/cellSize;
+    const atlasCellHeight = atlasHeight/cellSize;
+    const atlasCellCount = atlasCellWidth*atlasCellHeight;
+    let charSegments;
+    if (characters.length > atlasCellCount) {
+        let index = 0;
+        charSegments = [];
+        while (index < characters.length) {
+            let segment = characters.slice(index, index+atlasCellCount);
+            charSegments.push(segment);
+            index += segment.length;
+        }
+    } else {
+        charSegments = [characters];
+    }
+
+    glyphContext.canvas.width = atlasWidth;
+    glyphContext.canvas.height = atlasHeight;
+    glyphContext.font = `${cellSize}px monospace`;
+    glyphContext.textAlign = 'center';
+    glyphContext.textBaseline = 'middle';
+    glyphContext.clearRect(0, 0, atlasWidth, atlasHeight);
+    // TODO see if background rect can be deleted just for processing
+    // (technically the canvas clears to 0,0,0,0)
+    glyphContext.fillStyle = 'black';
+    glyphContext.fillRect(0, 0, atlasWidth, atlasHeight);
+
+    for (const segment of charSegments) {
+        // Draw this atlas
+        for (const [index, character] of segment.entries()) {
+            const column = index % atlasCellHeight;
+            const row = Math.floor(index/atlasCellWidth);
+            const centerX = (column+0.5)*cellSize;
+            const centerY = (row+0.5)*cellSize;
+
+            glyphContext.fillStyle = 'white';
+            glyphContext.fillText(character, centerX, centerY);
+        }
+    }
+}
+
 function pixelDataAsBlocks(cellSize, canvasCellWidth, canvasCellHeight,
                            canvasWidth, data, mapPixel) {
     return new Array(canvasCellWidth).fill()
