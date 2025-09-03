@@ -1,9 +1,11 @@
 let gl;
 let redrawProgram;
+let sobelProgram;
 let canvasDCTProgram;
 let texCoordBuffer;
 let imageTexture;
 let imagePixels;
+let imageSobel;
 let imageDCT;
 let cellSize = 8;
 let userImage;
@@ -23,6 +25,31 @@ const imageRedrawFragmentSource = `
     uniform sampler2D image;
     void main() {
         gl_FragColor = texture2D(image, texCoord);
+    }
+`;
+
+const sobelFragmentSource = `
+    precision mediump float;
+    varying vec2 texCoord;
+    uniform sampler2D image;
+    uniform vec2 pixelSize;
+    vec2 sobel(sampler2D texture, vec2 coord, vec2 pixel) {
+        const float sqrt3 = sqrt(3.0);
+        float tl = length(texture2D(texture, coord+pixel*vec2(-1,-1)).rgb)/sqrt3;
+        float tc = length(texture2D(texture, coord+pixel*vec2( 0,-1)).rgb)/sqrt3;
+        float tr = length(texture2D(texture, coord+pixel*vec2( 1,-1)).rgb)/sqrt3;
+        float cl = length(texture2D(texture, coord+pixel*vec2(-1, 0)).rgb)/sqrt3;
+        float cr = length(texture2D(texture, coord+pixel*vec2( 1, 0)).rgb)/sqrt3;
+        float bl = length(texture2D(texture, coord+pixel*vec2(-1, 1)).rgb)/sqrt3;
+        float bc = length(texture2D(texture, coord+pixel*vec2( 0, 1)).rgb)/sqrt3;
+        float br = length(texture2D(texture, coord+pixel*vec2( 1, 1)).rgb)/sqrt3;
+        float gx = -tl - 2.0*cl - bl + tr + 2.0*cr + br;
+        float gy = -tl - 2.0*tc - tr + bl + 2.0*bc + br;
+        return vec2(gx, gy);
+    }
+    void main() {
+        vec2 gradient = sobel(image, texCoord, pixelSize);
+        gl_FragColor = vec4(gradient, length(gradient)/sqrt(2.0), 1);
     }
 `;
 
@@ -65,6 +92,11 @@ export function init(canvas) {
         imageRedrawFragmentSource,
     );
 
+    sobelProgram = compileShaders(
+        flatSampleVertexSource,
+        sobelFragmentSource,
+    );
+
     texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
@@ -75,9 +107,11 @@ export function init(canvas) {
         1.0, 0.0,
         1.0, 1.0,
     ]), gl.STATIC_DRAW);
-    const texCoordAttrib = gl.getAttribLocation(redrawProgram, "coord");
-    gl.enableVertexAttribArray(texCoordAttrib);
-    gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
+    for (const program of [redrawProgram, sobelProgram]) {
+        const texCoordAttrib = gl.getAttribLocation(program, "coord");
+        gl.enableVertexAttribArray(texCoordAttrib);
+        gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
+    }
 
     imageTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, imageTexture);
@@ -85,7 +119,6 @@ export function init(canvas) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
 
     gl.clearColor(0, 0, 0, 0);
 }
@@ -195,6 +228,31 @@ export function refresh() {
                 const pixelIndex = (pixelRow * width) + pixelColumn;
                 return dctBytes[pixelIndex*4] / 255;
             }))));
+
+        gl.useProgram(sobelProgram);
+        gl.uniform2f(gl.getUniformLocation(sobelProgram, "pixelSize"),
+            1.0/width, 1.0/height);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
+        imageSobel = new Array(canvasCellWidth).fill()
+            .map((_, gridColumn) => new Array(canvasCellHeight).fill()
+            .map((_, gridRow) => new Array(cellSize).fill()
+            .map((_, cellColumn) => new Array(cellSize).fill()
+            .map((_, cellRow) => {
+                const pixelRowCellBase = canvasCellHeight-gridRow-1;
+                const pixelRowCellOffset = cellSize-cellRow-1;
+                const pixelRow = (pixelRowCellBase * cellSize)
+                                 + pixelRowCellOffset;
+                const pixelColumn = (gridColumn*cellSize)+cellColumn;
+                const pixelIndex = (pixelRow * width) + pixelColumn;
+                const byteIndex = pixelIndex*4;
+                return Array.from(
+                    dctBytes.slice(byteIndex, byteIndex+3),
+                    (x) => x/255,
+                );
+            }))));
+        console.log(imageSobel);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
