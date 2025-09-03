@@ -222,12 +222,11 @@ export function computeGlyphs(atlasWidth, atlasHeight, cellSize, characters) {
         if (character.length != 1 || typeof character !== 'string')
             throw new Error("character parameter was not a length-1 string");
     }
-    if (!glyphContext)
-        throw new Error("glyph canvas context was uninitialized");
-
     if (atlasWidth % cellSize !== 0 || atlasHeight % cellSize !== 0)
         throw new Error(`atlas size ${atlasWidth},${atlasHeight}`
             + `not a factor of cell size ${cellSize},${cellSize}`);
+
+    const glyphContext = document.createElement("canvas").getContext("2d");
 
     const atlasCellWidth = atlasWidth/cellSize;
     const atlasCellHeight = atlasHeight/cellSize;
@@ -256,6 +255,7 @@ export function computeGlyphs(atlasWidth, atlasHeight, cellSize, characters) {
     glyphContext.fillStyle = 'black';
     glyphContext.fillRect(0, 0, atlasWidth, atlasHeight);
 
+    glyphContext.fillStyle = 'white';
     for (const segment of charSegments) {
         // Draw this atlas
         for (const [index, character] of segment.entries()) {
@@ -264,7 +264,6 @@ export function computeGlyphs(atlasWidth, atlasHeight, cellSize, characters) {
             const centerX = (column+0.5)*cellSize;
             const centerY = (row+0.5)*cellSize;
 
-            glyphContext.fillStyle = 'white';
             glyphContext.fillText(character, centerX, centerY);
         }
     }
