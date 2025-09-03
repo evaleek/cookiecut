@@ -1,7 +1,9 @@
 let gl;
+let redrawProgram;
 let canvasDCTProgram;
 let texCoordBuffer;
 let imageTexture;
+let imagePixels;
 let imageDCT;
 let cellSize = 8;
 let userImage;
@@ -12,6 +14,15 @@ const flatSampleVertexSource = `
     void main() {
         gl_Position = vec4(coord*vec2(2,-2)-vec2(1,-1), 0, 1);
         texCoord = coord;
+    }
+`;
+
+const imageRedrawFragmentSource = `
+    precision mediump float;
+    varying vec2 texCoord;
+    uniform sampler2D image;
+    void main() {
+        gl_FragColor = texture2D(image, texCoord);
     }
 `;
 
@@ -49,6 +60,11 @@ export function init(canvas) {
     gl = canvas.getContext("webgl");
     if (!gl) throw new Error("Could not initialize WebGL.");
 
+    redrawProgram = compileShaders(
+        flatSampleVertexSource,
+        imageRedrawFragmentSource,
+    );
+
     texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
@@ -59,6 +75,9 @@ export function init(canvas) {
         1.0, 0.0,
         1.0, 1.0,
     ]), gl.STATIC_DRAW);
+    const texCoordAttrib = gl.getAttribLocation(redrawProgram, "coord");
+    gl.enableVertexAttribArray(texCoordAttrib);
+    gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
 
     imageTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, imageTexture);
@@ -107,19 +126,20 @@ export function refresh() {
         gl.canvas.height = height;
         gl.viewport(0, 0, width, height);
 
+        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+
+        gl.useProgram(redrawProgram);
+
         canvasDCTProgram = compileShaders(
             flatSampleVertexSource,
             dctFragmentSource(cellSize, cellSize, width, height),
         );
-        gl.useProgram(canvasDCTProgram);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
         const texCoordAttrib = gl.getAttribLocation(canvasDCTProgram, "coord");
         gl.enableVertexAttribArray(texCoordAttrib);
         gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
 
-        const imageDctTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, imageDctTexture);
+        const resultTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, resultTexture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -129,15 +149,38 @@ export function refresh() {
         const framebuffer = gl.createFramebuffer();
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
-            gl.TEXTURE_2D, imageDctTexture, 0);
+            gl.TEXTURE_2D, resultTexture, 0);
 
         gl.bindTexture(gl.TEXTURE_2D, imageTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, userImage);
 
+        let dctBytes = new Uint8Array(width*height*4);
+
+        gl.useProgram(redrawProgram);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
+        imagePixels = new Array(canvasCellWidth).fill()
+            .map((_, gridColumn) => new Array(canvasCellHeight).fill()
+            .map((_, gridRow) => new Array(cellSize).fill()
+            .map((_, cellColumn) => new Array(cellSize).fill()
+            .map((_, cellRow) => {
+                const pixelRowCellBase = canvasCellHeight-gridRow-1;
+                const pixelRowCellOffset = cellSize-cellRow-1;
+                const pixelRow = (pixelRowCellBase * cellSize)
+                                 + pixelRowCellOffset;
+                const pixelColumn = (gridColumn*cellSize)+cellColumn;
+                const pixelIndex = (pixelRow * width) + pixelColumn;
+                const byteIndex = pixelIndex*4;
+                return Array.from(
+                    dctBytes.slice(byteIndex, byteIndex+4),
+                    (x) => x/255,
+                );
+            }))));
 
-        let dctBytes = new Uint8Array(width*height*4);
+        gl.useProgram(canvasDCTProgram);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
         gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
         imageDCT = new Array(canvasCellWidth).fill()
             .map((_, gridColumn) => new Array(canvasCellHeight).fill()
@@ -152,12 +195,6 @@ export function refresh() {
                 const pixelIndex = (pixelRow * width) + pixelColumn;
                 return dctBytes[pixelIndex*4] / 255;
             }))));
-
-        // TODO delete
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLES, 0, 6)
-        console.log(imageDCT[0][0]);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
