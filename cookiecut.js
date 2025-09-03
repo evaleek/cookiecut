@@ -111,8 +111,6 @@ export function init(canvas) {
         gl.enableVertexAttribArray(texCoordAttrib);
         gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
     }
-
-    gl.clearColor(0, 0, 0, 0);
 }
 
 export function setCellSize(size) {
@@ -150,6 +148,8 @@ export function refresh() {
         gl.canvas.width = width;
         gl.canvas.height = height;
         gl.viewport(0, 0, width, height);
+
+        gl.clearColor(0, 0, 0, 0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
 
@@ -214,7 +214,6 @@ export function refresh() {
             (pixel) => Array.from(pixel, (x) => x/255));
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
     }
 }
 
