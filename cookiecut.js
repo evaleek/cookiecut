@@ -285,10 +285,10 @@ export function computeGlyphDcts(characters) {
 function pixelDataAsBlocks(cellSize, canvasCellWidth, canvasCellHeight,
                            canvasWidth, data, mapPixel) {
     return new Array(canvasCellWidth).fill()
-        .map((_, gridColumn) => new Array(canvasCellHeight).fill()
-        .map((_, gridRow) => new Array(cellSize).fill()
-        .map((_, cellColumn) => new Array(cellSize).fill()
-        .map((_, cellRow) => {
+        .map((_, gridRow) => new Array(canvasCellWidth).fill()
+        .map((_, gridColumn) => new Array(cellSize).fill()
+        .map((_, cellRow) => new Array(cellSize).fill()
+        .map((_, cellColumn) => {
             const pixelRowCellBase = canvasCellHeight-gridRow-1;
             const pixelRowCellOffset = cellSize-cellRow-1;
             const pixelRow = (pixelRowCellBase * cellSize)
