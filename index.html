@@ -25,8 +25,8 @@
         });
 
         function onImageUpload() {
-            const len = this.files.length;
-            if (len == 1 && this.files[0].type.startsWith("image/")) {
+            const len = imageUpload.files.length;
+            if (len == 1 && imageUpload.files[0].type.startsWith("image/")) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     image.src = e.target.result;
@@ -36,7 +36,7 @@
                     };
                 };
                 // TODO handle read failure
-                reader.readAsDataURL(this.files[0]);
+                reader.readAsDataURL(imageUpload.files[0]);
             } else {
                 image.src = '';
                 cc.setImage(null);
@@ -46,6 +46,8 @@
                 }
             }
         }
+
+        onImageUpload();
     </script>
     <img id="userImage">
     <input type="number" id="cellSize" min="4" step="1" value="8">
