@@ -98,8 +98,10 @@ export function refresh() {
             throw new Error("unexpected cellSize value " + cellSize);
         }
 
-        const width = Math.ceil(userImage.naturalWidth/cellSize)*cellSize;
-        const height = Math.ceil(userImage.naturalHeight/cellSize)*cellSize;
+        const canvasCellWidth = Math.ceil(userImage.naturalWidth / cellSize);
+        const canvasCellHeight = Math.ceil(userImage.naturalHeight / cellSize);
+        const width = canvasCellWidth * cellSize;
+        const height = canvasCellHeight * cellSize;
 
         gl.canvas.width = width;
         gl.canvas.height = height;
@@ -115,8 +117,6 @@ export function refresh() {
         const texCoordAttrib = gl.getAttribLocation(canvasDCTProgram, "coord");
         gl.enableVertexAttribArray(texCoordAttrib);
         gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
-
-        imageDCT = new Uint8Array(width*height*4);
 
         const imageDctTexture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, imageDctTexture);
@@ -137,7 +137,27 @@ export function refresh() {
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, imageDCT);
+        let dctBytes = new Uint8Array(width*height*4);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
+        imageDCT = new Array(canvasCellWidth).fill()
+            .map((_, gridColumn) => new Array(canvasCellHeight).fill()
+            .map((_, gridRow) => new Array(cellSize).fill()
+            .map((_, cellColumn) => new Array(cellSize).fill()
+            .map((_, cellRow) => {
+                const pixelRowCellBase = canvasCellHeight-gridRow-1;
+                const pixelRowCellOffset = cellSize-cellRow-1;
+                const pixelRow = (pixelRowCellBase * cellSize)
+                                 + pixelRowCellOffset;
+                const pixelColumn = (gridColumn*cellSize)+cellColumn;
+                const pixelIndex = (pixelRow * width) + pixelColumn;
+                return dctBytes[pixelIndex*4] / 255;
+            }))));
+
+        // TODO delete
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 6)
+        console.log(imageDCT[0][0]);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
