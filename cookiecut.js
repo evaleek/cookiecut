@@ -193,41 +193,17 @@ export function refresh() {
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
-        imagePixels = new Array(canvasCellWidth).fill()
-            .map((_, gridColumn) => new Array(canvasCellHeight).fill()
-            .map((_, gridRow) => new Array(cellSize).fill()
-            .map((_, cellColumn) => new Array(cellSize).fill()
-            .map((_, cellRow) => {
-                const pixelRowCellBase = canvasCellHeight-gridRow-1;
-                const pixelRowCellOffset = cellSize-cellRow-1;
-                const pixelRow = (pixelRowCellBase * cellSize)
-                                 + pixelRowCellOffset;
-                const pixelColumn = (gridColumn*cellSize)+cellColumn;
-                const pixelIndex = (pixelRow * width) + pixelColumn;
-                const byteIndex = pixelIndex*4;
-                return Array.from(
-                    dctBytes.slice(byteIndex, byteIndex+4),
-                    (x) => x/255,
-                );
-            }))));
+        imagePixels = pixelDataAsBlocks(
+            cellSize, canvasCellWidth, canvasCellHeight, width, dctBytes,
+            (pixel) => Array.from(pixel, (x) => x/255));
 
         gl.useProgram(canvasDCTProgram);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
-        imageDCT = new Array(canvasCellWidth).fill()
-            .map((_, gridColumn) => new Array(canvasCellHeight).fill()
-            .map((_, gridRow) => new Array(cellSize).fill()
-            .map((_, cellColumn) => new Array(cellSize).fill()
-            .map((_, cellRow) => {
-                const pixelRowCellBase = canvasCellHeight-gridRow-1;
-                const pixelRowCellOffset = cellSize-cellRow-1;
-                const pixelRow = (pixelRowCellBase * cellSize)
-                                 + pixelRowCellOffset;
-                const pixelColumn = (gridColumn*cellSize)+cellColumn;
-                const pixelIndex = (pixelRow * width) + pixelColumn;
-                return dctBytes[pixelIndex*4] / 255;
-            }))));
+        imageDCT = pixelDataAsBlocks(
+            cellSize, canvasCellWidth, canvasCellHeight, width, dctBytes,
+            (pixel) => pixel[0]/255);
 
         gl.useProgram(sobelProgram);
         gl.uniform2f(gl.getUniformLocation(sobelProgram, "pixelSize"),
@@ -235,27 +211,30 @@ export function refresh() {
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
-        imageSobel = new Array(canvasCellWidth).fill()
-            .map((_, gridColumn) => new Array(canvasCellHeight).fill()
-            .map((_, gridRow) => new Array(cellSize).fill()
-            .map((_, cellColumn) => new Array(cellSize).fill()
-            .map((_, cellRow) => {
-                const pixelRowCellBase = canvasCellHeight-gridRow-1;
-                const pixelRowCellOffset = cellSize-cellRow-1;
-                const pixelRow = (pixelRowCellBase * cellSize)
-                                 + pixelRowCellOffset;
-                const pixelColumn = (gridColumn*cellSize)+cellColumn;
-                const pixelIndex = (pixelRow * width) + pixelColumn;
-                const byteIndex = pixelIndex*4;
-                return Array.from(
-                    dctBytes.slice(byteIndex, byteIndex+3),
-                    (x) => x/255,
-                );
-            }))));
-        console.log(imageSobel);
+        imageSobel = pixelDataAsBlocks(
+            cellSize, canvasCellWidth, canvasCellHeight, width, dctBytes,
+            (pixel) => Array.from(pixel, (x) => x/255));
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
+}
+
+function pixelDataAsBlocks(cellSize, canvasCellWidth, canvasCellHeight,
+                           canvasWidth, data, mapPixel) {
+    return new Array(canvasCellWidth).fill()
+        .map((_, gridColumn) => new Array(canvasCellHeight).fill()
+        .map((_, gridRow) => new Array(cellSize).fill()
+        .map((_, cellColumn) => new Array(cellSize).fill()
+        .map((_, cellRow) => {
+            const pixelRowCellBase = canvasCellHeight-gridRow-1;
+            const pixelRowCellOffset = cellSize-cellRow-1;
+            const pixelRow = (pixelRowCellBase * cellSize)
+                             + pixelRowCellOffset;
+            const pixelColumn = (gridColumn*cellSize)+cellColumn;
+            const pixelIndex = (pixelRow * canvasWidth) + pixelColumn;
+            const byteIndex = pixelIndex*4;
+            return mapPixel(data.slice(byteIndex, byteIndex+4));
+        }))));
 }
 
 function compileShaders(vertexShaderSource, fragmentShaderSource) {
