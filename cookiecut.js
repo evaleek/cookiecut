@@ -1,14 +1,13 @@
 let gl;
+let cellSize = 8;
 let redrawProgram;
 let sobelProgram;
 let canvasDCTProgram;
 let texCoordBuffer;
-let imageTexture;
+let userImage;
 let imagePixels;
 let imageSobel;
 let imageDCT;
-let cellSize = 8;
-let userImage;
 
 const flatSampleVertexSource = `
     attribute vec2 coord;
@@ -113,13 +112,6 @@ export function init(canvas) {
         gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
     }
 
-    imageTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, imageTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
     gl.clearColor(0, 0, 0, 0);
 }
 
@@ -184,6 +176,12 @@ export function refresh() {
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
             gl.TEXTURE_2D, resultTexture, 0);
 
+        const imageTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, imageTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.bindTexture(gl.TEXTURE_2D, imageTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, userImage);
 
@@ -216,6 +214,7 @@ export function refresh() {
             (pixel) => Array.from(pixel, (x) => x/255));
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
     }
 }
 
