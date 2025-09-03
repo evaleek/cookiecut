@@ -187,22 +187,22 @@ export function refresh() {
         gl.bindTexture(gl.TEXTURE_2D, imageTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, userImage);
 
-        let dctBytes = new Uint8Array(width*height*4);
+        let pixelBytes = new Uint8Array(width*height*4);
 
         gl.useProgram(redrawProgram);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
-        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBytes);
         imagePixels = pixelDataAsBlocks(
-            cellSize, canvasCellWidth, canvasCellHeight, width, dctBytes,
+            cellSize, canvasCellWidth, canvasCellHeight, width, pixelBytes,
             (pixel) => Array.from(pixel, (x) => x/255));
 
         gl.useProgram(canvasDCTProgram);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
-        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBytes);
         imageDCT = pixelDataAsBlocks(
-            cellSize, canvasCellWidth, canvasCellHeight, width, dctBytes,
+            cellSize, canvasCellWidth, canvasCellHeight, width, pixelBytes,
             (pixel) => pixel[0]/255);
 
         gl.useProgram(sobelProgram);
@@ -210,9 +210,9 @@ export function refresh() {
             1.0/width, 1.0/height);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
-        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dctBytes);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBytes);
         imageSobel = pixelDataAsBlocks(
-            cellSize, canvasCellWidth, canvasCellHeight, width, dctBytes,
+            cellSize, canvasCellWidth, canvasCellHeight, width, pixelBytes,
             (pixel) => Array.from(pixel, (x) => x/255));
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
