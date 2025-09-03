@@ -3,6 +3,7 @@ let cellSize = 8;
 let redrawProgram;
 let sobelProgram;
 let canvasDCTProgram;
+let canvasDCTProgramCellSize;
 let texCoordBuffer;
 let userImage;
 let imagePixels;
@@ -52,13 +53,13 @@ const sobelFragmentSource = `
     }
 `;
 
-const dctFragmentSource = (cellWidth, cellHeight, canvasWidth, canvasHeight) => `
+const dctFragmentSource = (cellSize) => `
     precision mediump float;
     varying vec2 texCoord;
     uniform sampler2D image;
-    const vec2 cellPixelSize = vec2(${cellWidth}, ${cellHeight});
-    const vec2 pixelSize = vec2(${1.0/canvasWidth}, ${1.0/canvasHeight});
-    const vec2 cellSize = vec2(${cellWidth/canvasWidth}, ${cellHeight/canvasHeight});
+    const vec2 cellPixelSize = vec2(${cellSize}, ${cellSize});
+    uniform vec2 pixelSize;
+    uniform vec2 cellSize;
     void main() {
         vec2 cell = floor(texCoord/cellSize);
         vec2 cellBase = cell*cellSize;
@@ -78,7 +79,7 @@ const dctFragmentSource = (cellWidth, cellHeight, canvasWidth, canvasHeight) => 
         }
         gl_FragColor = vec4(dct, 0, 0, 1);
     }
-`
+`;
 
 export const supported = () => typeof WebGLRenderingContext !== 'undefined';
 
@@ -153,12 +154,7 @@ export function refresh() {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
 
-        gl.useProgram(redrawProgram);
-
-        canvasDCTProgram = compileShaders(
-            flatSampleVertexSource,
-            dctFragmentSource(cellSize, cellSize, width, height),
-        );
+        refreshAndUseDctShader(width, height);
         const texCoordAttrib = gl.getAttribLocation(canvasDCTProgram, "coord");
         gl.enableVertexAttribArray(texCoordAttrib);
         gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
@@ -217,56 +213,73 @@ export function refresh() {
     }
 }
 
-export function computeGlyphs(atlasWidth, atlasHeight, cellSize, characters) {
+export function computeGlyphDcts(characters) {
     for (const character of characters) {
         if (character.length != 1 || typeof character !== 'string')
             throw new Error("character parameter was not a length-1 string");
     }
-    if (atlasWidth % cellSize !== 0 || atlasHeight % cellSize !== 0)
-        throw new Error(`atlas size ${atlasWidth},${atlasHeight}`
-            + `not a factor of cell size ${cellSize},${cellSize}`);
 
     const glyphContext = document.createElement("canvas").getContext("2d");
 
-    const atlasCellWidth = atlasWidth/cellSize;
-    const atlasCellHeight = atlasHeight/cellSize;
-    const atlasCellCount = atlasCellWidth*atlasCellHeight;
-    let charSegments;
-    if (characters.length > atlasCellCount) {
-        let index = 0;
-        charSegments = [];
-        while (index < characters.length) {
-            let segment = characters.slice(index, index+atlasCellCount);
-            charSegments.push(segment);
-            index += segment.length;
-        }
-    } else {
-        charSegments = [characters];
-    }
+    const gridWidth = Math.ceil(Math.sqrt(characters.length));
+    console.assert(gridWidth*gridWidth >= characters.length);
+    const pixelWidth = gridWidth * cellSize;
 
-    glyphContext.canvas.width = atlasWidth;
-    glyphContext.canvas.height = atlasHeight;
+    glyphContext.canvas.width = pixelWidth;
+    glyphContext.canvas.height = pixelWidth;
     glyphContext.font = `${cellSize}px monospace`;
     glyphContext.textAlign = 'center';
     glyphContext.textBaseline = 'middle';
-    glyphContext.clearRect(0, 0, atlasWidth, atlasHeight);
+    glyphContext.clearRect(0, 0, pixelWidth, pixelWidth);
     // TODO see if background rect can be deleted just for processing
     // (technically the canvas clears to 0,0,0,0)
     glyphContext.fillStyle = 'black';
-    glyphContext.fillRect(0, 0, atlasWidth, atlasHeight);
+    glyphContext.fillRect(0, 0, pixelWidth, pixelWidth);
 
     glyphContext.fillStyle = 'white';
-    for (const segment of charSegments) {
-        // Draw this atlas
-        for (const [index, character] of segment.entries()) {
-            const column = index % atlasCellHeight;
-            const row = Math.floor(index/atlasCellWidth);
-            const centerX = (column+0.5)*cellSize;
-            const centerY = (row+0.5)*cellSize;
-
-            glyphContext.fillText(character, centerX, centerY);
-        }
+    for (const [index, character] of characters.entries()) {
+        const column = index % gridWidth;
+        const row = Math.floor(index/gridWidth);
+        const centerX = (column+0.5)*cellSize;
+        const centerY = (row+0.5)*cellSize;
+        glyphContext.fillText(character, centerX, centerY);
     }
+
+    gl.viewport(0, 0, pixelWidth, pixelWidth);
+
+    const resultTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, resultTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, pixelWidth, pixelWidth,
+        0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D, resultTexture, 0);
+
+    const glyphAtlas = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, glyphAtlas);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
+        glyphContext.canvas);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    refreshAndUseDctShader(pixelWidth, pixelWidth);
+
+    let pixelBytes = new Uint8Array(pixelWidth*pixelWidth*4);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.readPixels(0, 0, pixelWidth, pixelWidth, gl.RGBA, gl.UNSIGNED_BYTE, pixelBytes);
+    return pixelDataAsBlocks(
+            cellSize, gridWidth, gridWidth, pixelWidth, pixelBytes,
+            (pixel) => pixel[0]/255)
+        .flat(1)
+        .slice(0, characters.length);
 }
 
 function pixelDataAsBlocks(cellSize, canvasCellWidth, canvasCellHeight,
@@ -285,6 +298,21 @@ function pixelDataAsBlocks(cellSize, canvasCellWidth, canvasCellHeight,
             const byteIndex = pixelIndex*4;
             return mapPixel(data.slice(byteIndex, byteIndex+4));
         }))));
+}
+
+function refreshAndUseDctShader(canvasWidth, canvasHeight) {
+    if (canvasDCTProgramCellSize != cellSize) {
+        canvasDCTProgram = compileShaders(
+            flatSampleVertexSource,
+            dctFragmentSource(cellSize),
+        );
+        canvasDCTProgramCellSize = cellSize;
+    }
+    gl.useProgram(canvasDCTProgram);
+    gl.uniform2f(gl.getUniformLocation(canvasDCTProgram, "pixelSize"),
+        1.0/canvasWidth, 1.0/canvasHeight);
+    gl.uniform2f(gl.getUniformLocation(canvasDCTProgram, "cellSize"),
+        cellSize/canvasWidth, cellSize/canvasHeight);
 }
 
 function compileShaders(vertexShaderSource, fragmentShaderSource) {
