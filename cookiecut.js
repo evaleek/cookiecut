@@ -284,7 +284,7 @@ export function computeGlyphDcts(characters) {
 
 function pixelDataAsBlocks(cellSize, canvasCellWidth, canvasCellHeight,
                            canvasWidth, data, mapPixel) {
-    return new Array(canvasCellWidth).fill()
+    return new Array(canvasCellHeight).fill()
         .map((_, gridRow) => new Array(canvasCellWidth).fill()
         .map((_, gridColumn) => new Array(cellSize).fill()
         .map((_, cellRow) => new Array(cellSize).fill()
