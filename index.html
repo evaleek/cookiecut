@@ -10,9 +10,9 @@
     <script type="module">
         import * as cc from './cookiecut.js';
 
-        const image = document.getElementById("userImage");
-        const imageUpload = document.getElementById("userImageUpload");
-        const cellSize = document.getElementById("cellSize");
+        const image = document.getElementById("user-image");
+        const imageUpload = document.getElementById("user-image-upload");
+        const cellSize = document.getElementById("cell-size");
         const canvas = document.getElementById("canvas");
 
         // TODO check for WebGL support and fail clearly to user
@@ -48,10 +48,12 @@
         }
 
         onImageUpload();
+
     </script>
-    <img id="userImage">
-    <input type="number" id="cellSize" min="4" step="1" value="8">
-    <input type="file" id="userImageUpload" accept="image/*">
+    <img id="user-image">
+    <input type="number" id="cell-size" min="4" step="1" value="8">
+    <input type="file" id="user-image-upload" accept="image/*">
     <canvas id="canvas"></canvas>
+    <div id="active-glyphs"></div>
 </body>
 </html>
