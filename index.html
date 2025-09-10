@@ -47,7 +47,7 @@
                     throw new Error("character parameter was not a length-1 string");
             }
 
-            // TODO call into cc to rebuild list of glyphs
+            cc.setGlyphs(characters);
 
             while (activeGlyphs.firstChild) {
                 activeGlyphs.removeChild(activeGlyphs.firstChild);

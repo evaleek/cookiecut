@@ -9,6 +9,7 @@ let userImage;
 let imagePixels;
 let imageSobel;
 let imageDCT;
+let glyphDcts;
 
 const flatSampleVertexSource = `
     attribute vec2 coord;
@@ -133,6 +134,14 @@ export function setCellSize(size) {
 export function setImage(image) {
     userImage = image;
     refresh();
+}
+
+export function setGlyphs(characters) {
+    for (const character of characters) {
+        if (character.length != 1 || typeof character !== 'string')
+            throw new Error("character parameter was not a length-1 string");
+    }
+    glyphDcts = computeGlyphDcts(characters);
 }
 
 export function refresh() {
