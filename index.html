@@ -15,6 +15,7 @@
         const cellSize = document.getElementById("cell-size");
         const canvas = document.getElementById("canvas");
         const activeGlyphs = document.getElementById("active-glyphs");
+        const output = document.getElementById("output");
 
         // TODO check for WebGL support and fail clearly to user
 
@@ -27,6 +28,7 @@
                     image.onload = function() {
                         cc.setImage(image);
                         canvas.style.display = "inline";
+                        writeOutput(cc.findCellMatches());
                     };
                 };
                 // TODO handle read failure
@@ -61,6 +63,12 @@
             }
         }
 
+        function writeOutput(characters) {
+            output.rows = characters.length;
+            output.cols = characters[0].length;
+            output.value = characters.map((row) => row.join('')).join('\n');
+        }
+
         cc.init(canvas);
         cc.setCellSize(cellSize.value);
         imageUpload.addEventListener("change", onImageUpload);
@@ -68,13 +76,15 @@
             cc.setCellSize(e.target.value);
         });
 
+        setGlyphs(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l']);
         onImageUpload();
-        setGlyphs(['a', 'b', 'c']);
+
     </script>
     <img id="user-image">
     <input type="number" id="cell-size" min="4" step="1" value="8">
     <input type="file" id="user-image-upload" accept="image/*">
     <canvas id="canvas"></canvas>
     <div id="active-glyphs"></div>
+    <textarea id="output" readonly></textarea>
 </body>
 </html>
