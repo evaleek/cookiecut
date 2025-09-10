@@ -1,4 +1,5 @@
 let gl;
+let displayContext;
 let cellSize = 8;
 let redrawProgram;
 let sobelProgram;
@@ -11,6 +12,8 @@ let imageMeans;
 let imageSobel;
 let imageDCT;
 let glyphs;
+
+export let imageSize;
 
 const flatSampleVertexSource = `
     attribute vec2 coord;
@@ -92,8 +95,9 @@ function dctDistance(a, b) {
 }
 
 export function init(canvas) {
-    gl = canvas.getContext("webgl");
+    gl = document.createElement("canvas").getContext("webgl");
     if (!gl) throw new Error("Could not initialize WebGL.");
+    displayContext = canvas.getContext("2d");
 
     redrawProgram = compileShaders(
         flatSampleVertexSource,
@@ -161,6 +165,8 @@ export function refresh() {
         const canvasCellHeight = Math.ceil(userImage.naturalHeight / cellSize);
         const width = canvasCellWidth * cellSize;
         const height = canvasCellHeight * cellSize;
+
+        imageSize = [width, height];
 
         gl.canvas.width = width;
         gl.canvas.height = height;
@@ -234,22 +240,61 @@ export function refresh() {
             return pixelsMean(block.map((row) => pixelsMean(row)));
         }));
 
-        const meanPixelWidth = imageMeans.length;
-        const meanPixelHeight = imageMeans[0].length;
+        //const meanPixelWidth = imageMeans.length;
+        //const meanPixelHeight = imageMeans[0].length;
 
-        const cellMeansTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, cellMeansTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, meanPixelWidth, meanPixelHeight,
-            0, gl.RGBA, gl.UNSIGNED_BYTE,
-            Uint8Array.from(imageMeans.flat(2).map((x) => Math.trunc(x*255)))
-        );
+        //const cellMeansTexture = gl.createTexture();
+        //gl.bindTexture(gl.TEXTURE_2D, cellMeansTexture);
+        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        //gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, meanPixelWidth, meanPixelHeight,
+        //    0, gl.RGBA, gl.UNSIGNED_BYTE,
+        //    Uint8Array.from(imageMeans.flat(2).map((x) => Math.trunc(x*255)))
+        //);
 
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        //gl.clear(gl.COLOR_BUFFER_BIT);
+        //gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+}
+
+export function drawMeans(clearColor) {
+    const xStep = displayContext.canvas.width / imageMeans.length;
+    const yStep = displayContext.canvas.height / imageMeans[0].length;
+    const cellCoord =
+        (row, column) => [xStep/2 + xStep*column, yStep/2 + yStep*row];
+    const circleRadius = Math.min(xStep, yStep) / 2;
+
+    if (clearColor) {
+        displayContext.fillStyle = clearColor;
+        displayContext.fillRect(0, 0,
+            displayContext.canvas.width, displayContext.canvas.height);
+    } else {
+        displayContext.clearRect(0, 0,
+            displayContext.canvas.width, displayContext.canvas.height);
+    }
+
+    for (const [rowIdx, row] of imageMeans.entries()) {
+        for (const [colIdx, pixel] of row.entries()) {
+            displayContext.fillStyle = (pixel[4]==1.0)
+                ? displayContext.strokeStyle = `rgb(
+                    ${Math.floor(pixel[0]*255)}
+                    ${Math.floor(pixel[1]*255)}
+                    ${Math.floor(pixel[2]*255)})`
+                : displayContext.strokeStyle = `rgb(
+                    ${Math.floor(pixel[0]*255)}
+                    ${Math.floor(pixel[1]*255)}
+                    ${Math.floor(pixel[2]*255)}
+                    / ${Math.floor(pixel[3]*100)}%)`;
+            const value = ((pixel[0]+pixel[1]+pixel[2])/3)*pixel[3];
+            const [x, y] = cellCoord(rowIdx, colIdx);
+            const r = value * circleRadius;
+
+            displayContext.beginPath();
+            displayContext.arc(x, y, r, 0, 2*Math.PI);
+            displayContext.fill();
+        }
     }
 }
 

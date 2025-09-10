@@ -29,6 +29,9 @@
                         cc.setImage(image);
                         canvas.style.display = "inline";
                         writeOutput(cc.findCellMatches());
+                        canvas.width = cc.imageSize[0];
+                        canvas.height = cc.imageSize[1];
+                        cc.drawMeans();
                     };
                 };
                 // TODO handle read failure
