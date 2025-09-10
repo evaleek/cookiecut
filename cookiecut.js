@@ -7,6 +7,7 @@ let canvasDCTProgramCellSize;
 let texCoordBuffer;
 let userImage;
 let imagePixels;
+let imageMeans;
 let imageSobel;
 let imageDCT;
 let glyphs;
@@ -205,6 +206,12 @@ export function refresh() {
         imagePixels = pixelDataAsBlocks(
             cellSize, canvasCellWidth, canvasCellHeight, width, pixelBytes,
             (pixel) => Array.from(pixel, (x) => x/255));
+        imageMeans = imagePixels.map((row) => row.map((block) => {
+            const pixelsMean = (pixels) => pixels
+                .reduce((a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2], a[3]+b[3]])
+                .map((component) => component/pixels.length);
+            return pixelsMean(block.map((row) => pixelsMean(row)));
+        }));
 
         gl.useProgram(canvasDCTProgram);
         gl.clear(gl.COLOR_BUFFER_BIT);
