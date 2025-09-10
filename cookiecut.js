@@ -213,7 +213,7 @@ export function refresh() {
     }
 }
 
-export function writeGlyph(size, character, color, drawingContext) {
+export function writeGlyph(character, size, color, drawingContext) {
     if (character.length != 1 || typeof character !== 'string') {
         throw new Error("character parameter was not a length-1 string: "
             + character);
@@ -222,28 +222,41 @@ export function writeGlyph(size, character, color, drawingContext) {
                  drawingContext instanceof CanvasRenderingContext2D)
         ? drawingContext
         : document.createElement("canvas").getContext("2d");
+    const px = size ?? cellSize;
 
-    ctx.canvas.width = size;
-    ctx.canvas.height = size;
-    ctx.font = `${size}px monospace`;
+    ctx.canvas.width = px;
+    ctx.canvas.height = px;
+    ctx.font = `${px}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.clearRect(0, 0, size, size);
+    ctx.clearRect(0, 0, px, px);
     ctx.fillStyle = color ?? 'black';
-    ctx.fillText(character, size/2, size/2);
+    ctx.fillText(character, px/2, px/2);
 
     return ctx.canvas.toDataURL();
 }
 
-export function writeGlyphs(size, characters, color) {
+export function writeGlyphs(characters, size, color) {
     for (const character of characters) {
         if (character.length != 1 || typeof character !== 'string')
             throw new Error("character parameter was not a length-1 string");
     }
 
     const ctx = document.createElement("canvas").getContext("2d");
+    const px = size ?? cellSize;
 
-    return characters.map((c) => writeGlyph(size, c, color, ctx));
+    ctx.canvas.width = px;
+    ctx.canvas.height = px;
+    ctx.font = `${px}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color ?? 'black';
+
+    return characters.map((c) => {
+        ctx.clearRect(0, 0, px, px);
+        ctx.fillText(c, px/2, px/2);
+        return ctx.canvas.toDataURL();
+    });
 }
 
 export function computeGlyphDcts(characters) {

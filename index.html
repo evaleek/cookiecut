@@ -14,15 +14,9 @@
         const imageUpload = document.getElementById("user-image-upload");
         const cellSize = document.getElementById("cell-size");
         const canvas = document.getElementById("canvas");
+        const activeGlyphs = document.getElementById("active-glyphs");
 
         // TODO check for WebGL support and fail clearly to user
-
-        cc.init(canvas);
-        cc.setCellSize(cellSize.value);
-        imageUpload.addEventListener("change", onImageUpload);
-        cellSize.addEventListener("change", (e) => {
-            cc.setCellSize(e.target.value);
-        });
 
         function onImageUpload() {
             const len = imageUpload.files.length;
@@ -47,8 +41,35 @@
             }
         }
 
-        onImageUpload();
+        function setGlyphs(characters) {
+            for (const character of characters) {
+                if (character.length != 1 || typeof character !== 'string')
+                    throw new Error("character parameter was not a length-1 string");
+            }
 
+            // TODO call into cc to rebuild list of glyphs
+
+            while (activeGlyphs.firstChild) {
+                activeGlyphs.removeChild(activeGlyphs.firstChild);
+            }
+
+            const glyphs = cc.writeGlyphs(characters);
+            for (const glyph of glyphs) {
+                let img = document.createElement('img');
+                img.src = glyph;
+                activeGlyphs.appendChild(img);
+            }
+        }
+
+        cc.init(canvas);
+        cc.setCellSize(cellSize.value);
+        imageUpload.addEventListener("change", onImageUpload);
+        cellSize.addEventListener("change", (e) => {
+            cc.setCellSize(e.target.value);
+        });
+
+        onImageUpload();
+        setGlyphs(['a', 'b', 'c']);
     </script>
     <img id="user-image">
     <input type="number" id="cell-size" min="4" step="1" value="8">
