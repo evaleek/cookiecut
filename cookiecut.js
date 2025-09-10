@@ -213,6 +213,28 @@ export function refresh() {
     }
 }
 
+export function writeGlyph(size, character, color, drawingContext) {
+    if (character.length != 1 || typeof character !== 'string') {
+        throw new Error("character parameter was not a length-1 string: "
+            + character);
+    }
+    const ctx = (drawingContext &&
+                 drawingContext instanceof CanvasRenderingContext2D)
+        ? drawingContext
+        : document.createElement("canvas").getContext("2d");
+
+    ctx.canvas.width = size;
+    ctx.canvas.height = size;
+    ctx.font = `${size}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.clearRect(0, 0, size, size);
+    ctx.fillStyle = color ?? 'black';
+    ctx.fillText(character, size/2, size/2);
+
+    return ctx.canvas.toDataURL();
+}
+
 export function computeGlyphDcts(characters) {
     for (const character of characters) {
         if (character.length != 1 || typeof character !== 'string')
