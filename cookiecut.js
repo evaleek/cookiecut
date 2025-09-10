@@ -9,7 +9,7 @@ let userImage;
 let imagePixels;
 let imageSobel;
 let imageDCT;
-let glyphDcts;
+let glyphs;
 
 const flatSampleVertexSource = `
     attribute vec2 coord;
@@ -84,6 +84,12 @@ const dctFragmentSource = (cellSize) => `
 
 export const supported = () => typeof WebGLRenderingContext !== 'undefined';
 
+function dctDistance(a, b) {
+    const b_flat = b.flat();
+    const zip = a.flat().map((x, idx) => [x, b_flat[idx]]);
+    return zip.reduce((acc, x) => acc + Math.abs(x[1]-x[0]), 0);
+}
+
 export function init(canvas) {
     gl = canvas.getContext("webgl");
     if (!gl) throw new Error("Could not initialize WebGL.");
@@ -141,7 +147,7 @@ export function setGlyphs(characters) {
         if (character.length != 1 || typeof character !== 'string')
             throw new Error("character parameter was not a length-1 string");
     }
-    glyphDcts = computeGlyphDcts(characters);
+    glyphs = computeGlyphDcts(characters).map((dct, idx) => [characters[idx], dct]);
 }
 
 export function refresh() {
@@ -220,6 +226,14 @@ export function refresh() {
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
+}
+
+export function findCellMatches() {
+    if (!imageDCT) throw new Error("image DCT was not computed");
+    if (!glyphs) throw new Error("glyphs were not set");
+
+    return imageDCT.map((row) => row.map((dct) => glyphs.reduce(
+        (a, b) => (dctDistance(dct, b[1]) < dctDistance(dct, a[1])) ? b : a)[0]));
 }
 
 export function writeGlyph(character, size, color, drawingContext) {
