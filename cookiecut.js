@@ -235,6 +235,17 @@ export function writeGlyph(size, character, color, drawingContext) {
     return ctx.canvas.toDataURL();
 }
 
+export function writeGlyphs(size, characters, color) {
+    for (const character of characters) {
+        if (character.length != 1 || typeof character !== 'string')
+            throw new Error("character parameter was not a length-1 string");
+    }
+
+    const ctx = document.createElement("canvas").getContext("2d");
+
+    return characters.map((c) => writeGlyph(size, c, color, ctx));
+}
+
 export function computeGlyphDcts(characters) {
     for (const character of characters) {
         if (character.length != 1 || typeof character !== 'string')
