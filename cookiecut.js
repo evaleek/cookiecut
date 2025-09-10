@@ -199,14 +199,6 @@ export function refresh() {
 
         let pixelBytes = new Uint8Array(width*height*4);
 
-        gl.useProgram(redrawProgram);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
-        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBytes);
-        imagePixels = pixelDataAsBlocks(
-            cellSize, canvasCellWidth, canvasCellHeight, width, pixelBytes,
-            (pixel) => Array.from(pixel, (x) => x/255));
-
         gl.useProgram(canvasDCTProgram);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -222,6 +214,14 @@ export function refresh() {
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBytes);
         imageSobel = pixelDataAsBlocks(
+            cellSize, canvasCellWidth, canvasCellHeight, width, pixelBytes,
+            (pixel) => Array.from(pixel, (x) => x/255));
+
+        gl.useProgram(redrawProgram);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBytes);
+        imagePixels = pixelDataAsBlocks(
             cellSize, canvasCellWidth, canvasCellHeight, width, pixelBytes,
             (pixel) => Array.from(pixel, (x) => x/255));
 
@@ -245,8 +245,11 @@ export function refresh() {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, meanPixelWidth, meanPixelHeight,
             0, gl.RGBA, gl.UNSIGNED_BYTE,
-            Uint8Array.from(imageMeans.toReversed().flat(2)
-                                      .map((x) => Math.trunc(x*255))));
+            Uint8Array.from(imageMeans.flat(2).map((x) => Math.trunc(x*255)))
+        );
+
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 }
 
