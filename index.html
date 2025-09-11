@@ -14,6 +14,9 @@
         const imageUpload = document.getElementById("user-image-upload");
         const cellSize = document.getElementById("cell-size");
         const canvas = document.getElementById("canvas");
+        const addLevel = document.getElementById("add-level");
+        const removeLevel = document.getElementById("remove-level");
+        const levels = document.getElementById("levels");
         const activeGlyphs = document.getElementById("active-glyphs");
         const output = document.getElementById("output");
 
@@ -72,12 +75,59 @@
             output.value = characters.map((row) => row.join('')).join('\n');
         }
 
+        function getLevels() {
+            return Array.from(levels.children)
+                .filter((element) => element.nodeName == "DIV" &&
+                                     element.classList.contains("level"))
+                .map((element) => { return {
+                    range: element.querySelector(
+                        ".level > input:first-of-type[type=\"range\"]"),
+                    glyphs: Array.from(element
+                        .querySelector(".level > .level-glyphs")
+                        .children)
+                        .filter((child) => element.nodeName == "IMG")
+                        .map((child) => { return {
+                            character: child.class,
+                            node: child
+                        }})
+                }});
+        }
+
+        function onAddLevel() {
+            const levelDiv = document.createElement("div");
+            levelDiv.append(document.getElementById("level-template")
+                                    .content.cloneNode(true));
+            levelDiv.setAttribute("class", "level");
+            levels.appendChild(levelDiv);
+        }
+
+        function onRemoveLevel() {
+            const levelNodes = Array.from(levels.children)
+                .filter((element) => element.nodeName == "DIV" &&
+                                     element.classList.contains("level"));
+            if (levelNodes.length > 0)
+                levels.removeChild(levelNodes.at(-1));
+        }
+
+        function onChangeLevels() {
+            if (getLevels()?.length > 0) {
+                removeLevel.disabled = false;
+            } else {
+                removeLevel.disabled = true;
+            }
+        }
+
         cc.init(canvas);
         cc.setCellSize(cellSize.value);
         imageUpload.addEventListener("change", onImageUpload);
         cellSize.addEventListener("change", (e) => {
             cc.setCellSize(e.target.value);
         });
+        addLevel.addEventListener("click", onAddLevel);
+        addLevel.addEventListener("click", onChangeLevels);
+        removeLevel.addEventListener("click", onRemoveLevel);
+        removeLevel.addEventListener("click", onChangeLevels);
+        onChangeLevels();
 
         setGlyphs(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l']);
         onImageUpload();
@@ -87,6 +137,16 @@
     <input type="number" id="cell-size" min="4" step="1" value="8">
     <input type="file" id="user-image-upload" accept="image/*">
     <canvas id="canvas"></canvas>
+    <div id="levels-control">
+        <input type="button" id="remove-level" value="Remove level">
+        <input type="button" id="add-level" value="Add level">
+    </div>
+    <div id="levels">
+        <template id="level-template">
+            <input type="range">
+            <div class="level-glyphs"></div>
+        </template>
+    </div>
     <div id="active-glyphs"></div>
     <textarea id="output" readonly></textarea>
 </body>
