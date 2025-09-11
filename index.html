@@ -76,37 +76,54 @@
         }
 
         function getLevels() {
-            return Array.from(levels.children)
+            const ranges = Array.from(
+                document.getElementById("level-ranges").children)
+                .filter((element) => element.nodeName == "INPUT" &&
+                                     element.getAttribute("type") == "range" &&
+                                     element.classList.contains("level-range"));
+            const glyphLists = Array.from(
+                document.getElementById("level-glyph-lists").children)
                 .filter((element) => element.nodeName == "DIV" &&
-                                     element.classList.contains("level"))
-                .map((element) => { return {
-                    range: element.querySelector(
-                        ".level > input:first-of-type[type=\"range\"]"),
-                    glyphs: Array.from(element
-                        .querySelector(".level > .level-glyphs")
-                        .children)
-                        .filter((child) => element.nodeName == "IMG")
-                        .map((child) => { return {
-                            character: child.class,
-                            node: child
-                        }})
-                }});
+                                     element.classList.contains("level-glyph-list"));
+            if (ranges.length != glyphLists.length) {
+                console.warn("found " + ranges.length +
+                " level ranges but " + glyphLists.length +
+                " glyph lists in the levels node");
+            }
+
+            return ranges.map((range, idx) => ({
+                range: range,
+                glyphs: {
+                    node: glyphLists[idx],
+                    glyphs: Array.from(glyphLists[idx].children)
+                                .filter((child) => child.nodeName == "IMG")
+                                .map((child) => ({
+                                    node: child,
+                                    character: child.className,
+                                })),
+                },
+            }));
         }
 
         function onAddLevel() {
-            const levelDiv = document.createElement("div");
-            levelDiv.append(document.getElementById("level-template")
-                                    .content.cloneNode(true));
-            levelDiv.setAttribute("class", "level");
-            levels.appendChild(levelDiv);
+            const levelRange = document.getElementById("range-template")
+                                       .content.cloneNode(true);
+            document.getElementById("level-ranges").appendChild(levelRange);
+
+            const levelGlyphs = document.getElementById("glyph-list-template")
+                                        .content.cloneNode(true);
+            document.getElementById("level-glyph-lists").appendChild(levelGlyphs);
         }
 
         function onRemoveLevel() {
-            const levelNodes = Array.from(levels.children)
-                .filter((element) => element.nodeName == "DIV" &&
-                                     element.classList.contains("level"));
-            if (levelNodes.length > 0)
-                levels.removeChild(levelNodes.at(-1));
+            const levelNodes = getLevels();
+            if (levelNodes.length > 0) {
+                const lastLevel = levelNodes.at(-1);
+                document.getElementById("level-ranges")
+                    .removeChild(lastLevel.range);
+                document.getElementById("level-glyph-lists")
+                    .removeChild(lastLevel.glyphs.node);
+            }
         }
 
         function onChangeLevels() {
@@ -142,10 +159,15 @@
         <input type="button" id="add-level" value="Add level">
     </div>
     <div id="levels">
-        <template id="level-template">
-            <input type="range">
-            <div class="level-glyphs"></div>
-        </template>
+        <div id="level-ranges">
+            <template id="range-template">
+                <input type="range" class="level-range">
+            </template>
+        </div>
+        <div id="level-glyph-lists">
+            <template id="glyph-list-template"><div class="level-glyph-list">
+            </div></template>
+        </div>
     </div>
     <div id="active-glyphs"></div>
     <textarea id="output" readonly></textarea>
