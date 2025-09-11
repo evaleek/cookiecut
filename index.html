@@ -4,6 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CookieCut</title>
+    <style>
+        #levels {
+            display: flex;
+        }
+
+        #level-ranges {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        #level-ranges > * {
+            flex: 1;
+        }
+
+        #level-glyph-lists {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #level-glyph-lists * {
+            flex: 1;
+        }
+    </style>
 </head>
 <body>
     <script type="module" src="./cookiecut.js"></script>
@@ -107,11 +131,39 @@
 
         function onAddLevel() {
             const levelRange = document.getElementById("range-template")
-                                       .content.cloneNode(true);
+                                       .content.cloneNode(true)
+                                       .firstElementChild;
+            const levelNodes = getLevels();
+            if (levelNodes.length > 0) {
+                const tailLevel = levelNodes.map((level) => level.range).at(-1);
+                const floorValue = Number(tailLevel.value);
+                const midValue = floorValue + ((1.0 - floorValue)*0.5);
+                const size = Math.min(Math.round((1.0 - floorValue)*100), 100);
+
+                levelRange.style.inlineSize = `${size}%`;
+                levelRange.setAttribute("min", floorValue);
+                levelRange.value = midValue;
+
+                levelRange.inputListener = (e) => {
+                    const newFloor = Number(e.target.value);
+                    const newSize = Math.min(Math.round((1.0 - newFloor)*100), 100);
+                    levelRange.style.inlineSize = `${newSize}%`;
+                    levelRange.setAttribute("min", newFloor);
+                    levelRange.dispatchEvent(new Event("input"));
+                };
+                tailLevel.addEventListener("input", levelRange.inputListener);
+            } else {
+                levelRange.style.inlineSize = "100%";
+                levelRange.setAttribute("min", 0);
+                levelRange.value = 0.5;
+            }
+
+
             document.getElementById("level-ranges").appendChild(levelRange);
 
             const levelGlyphs = document.getElementById("glyph-list-template")
-                                        .content.cloneNode(true);
+                                        .content.cloneNode(true)
+                                        .firstElementChild;
             document.getElementById("level-glyph-lists").appendChild(levelGlyphs);
         }
 
@@ -119,6 +171,10 @@
             const levelNodes = getLevels();
             if (levelNodes.length > 0) {
                 const lastLevel = levelNodes.at(-1);
+                if (lastLevel.range.inputListener) {
+                    lastLevel.range.removeEventListener("input",
+                        lastLevel.range.inputListener);
+                }
                 document.getElementById("level-ranges")
                     .removeChild(lastLevel.range);
                 document.getElementById("level-glyph-lists")
@@ -146,7 +202,7 @@
         removeLevel.addEventListener("click", onChangeLevels);
         onChangeLevels();
 
-        setGlyphs(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l']);
+        setGlyphs(['.', ':', ' ']);
         onImageUpload();
 
     </script>
@@ -161,11 +217,13 @@
     <div id="levels">
         <div id="level-ranges">
             <template id="range-template">
-                <input type="range" class="level-range">
+                <input type="range" class="level-range" step="any" max="1" style="inline-size:100%">
             </template>
         </div>
         <div id="level-glyph-lists">
             <template id="glyph-list-template"><div class="level-glyph-list">
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB0klEQVRYR+2WSyhEURjHx/uVxMKjlDySSCzETlE2UkQpkg0LUuztZaeUV7FSlCTJimJjIUlskOy8l0qxk9+/ztRNZs41nWk296tf37lz7vzPf777nTM3KZTgSErw+qHAQFCB/1SgkIbtgjZogDLIhnd4hmNYh6v/NLZfA32IbkGKRfyb+SWYAo2t4dfAKEqrRu2BfAb38AG50AgdkGbuWSGPW1fnBr8Ghrm3HRbhPIJwHZ8fQZGZbyJf2Ez4NWDTCc9PMFgwF7PkadsXXRuoZcFrs+geuSdeBnIQroA8yPA8ygLGalbFCbS6NJCFmEo8BPWQbBFXrzS7MlCO0CFU2QQ982pANWLU8NMD2lqXoC5X6BnPmRI/kb88K5QwfjHXzgz0IrhjRLX/dRJ6F/X+whoubl0bmEdw0oj2k7ej1FRdv+vawCaCA0ZUXa3ujhRrTIy4NrCM4JgR1S7QWf9XqPzqlUzXBgYR3DCir+QWePzlQA26D9ot4XDWhOko3kClUf4k67C5g1TQXu80Y1Ur/CfkzIDW1RF7AKURyq+P9WhmQO8GCqcGJJgP2g3dUA16N3iDU1Dz6YWkGPSY4mIgyo+PfcrPSRi7uo9vBgaCCgQV+AGxpEoh5HqrQAAAAABJRU5ErkJggg==">
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB0klEQVRYR+2WSyhEURjHx/uVxMKjlDySSCzETlE2UkQpkg0LUuztZaeUV7FSlCTJimJjIUlskOy8l0qxk9+/ztRNZs41nWk296tf37lz7vzPf777nTM3KZTgSErw+qHAQFCB/1SgkIbtgjZogDLIhnd4hmNYh6v/NLZfA32IbkGKRfyb+SWYAo2t4dfAKEqrRu2BfAb38AG50AgdkGbuWSGPW1fnBr8Ghrm3HRbhPIJwHZ8fQZGZbyJf2Ez4NWDTCc9PMFgwF7PkadsXXRuoZcFrs+geuSdeBnIQroA8yPA8ygLGalbFCbS6NJCFmEo8BPWQbBFXrzS7MlCO0CFU2QQ982pANWLU8NMD2lqXoC5X6BnPmRI/kb88K5QwfjHXzgz0IrhjRLX/dRJ6F/X+whoubl0bmEdw0oj2k7ej1FRdv+vawCaCA0ZUXa3ujhRrTIy4NrCM4JgR1S7QWf9XqPzqlUzXBgYR3DCir+QWePzlQA26D9ot4XDWhOko3kClUf4k67C5g1TQXu80Y1Ur/CfkzIDW1RF7AKURyq+P9WhmQO8GCqcGJJgP2g3dUA16N3iDU1Dz6YWkGPSY4mIgyo+PfcrPSRi7uo9vBgaCCgQV+AGxpEoh5HqrQAAAAABJRU5ErkJggg==">
             </div></template>
         </div>
     </div>
