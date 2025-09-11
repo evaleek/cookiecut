@@ -12,6 +12,8 @@ let imageMeans;
 let imageSobel;
 let imageDCT;
 let glyphs;
+let maskRGBs;
+let maskEpsilon;
 
 export let imageSize;
 
@@ -124,6 +126,8 @@ export function init(canvas) {
         gl.enableVertexAttribArray(texCoordAttrib);
         gl.vertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 0, 0);
     }
+
+    setMasks();
 }
 
 export function setCellSize(size) {
@@ -229,7 +233,7 @@ export function refresh() {
         gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBytes);
         imagePixels = pixelDataAsBlocks(
             cellSize, canvasCellWidth, canvasCellHeight, width, pixelBytes,
-            (pixel) => Array.from(pixel, (x) => x/255));
+            (pixel) => masked(Array.from(pixel, (x) => x/255)));
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -295,6 +299,23 @@ export function drawMeans(clearColor) {
             displayContext.arc(x, y, r, 0, 2*Math.PI);
             displayContext.fill();
         }
+    }
+}
+
+export function setMasks(rgbs, epsilon) {
+    maskRGBs = rgbs ? rgbs.map((rgb) => [rgb[0], rgb[1], rgb[2]])
+                    : null;
+    maskEpsilon = epsilon ?? 0.06;
+}
+
+function masked(pixel) {
+    const pRGB = pixel.slice(0, 3);
+    if (maskRGBs && ( maskRGBs.some((maskRGB) => pRGB.every((p, i) =>
+            Math.abs(maskRGB[i] - p) < maskEpsilon)) )) {
+        // TODO return whatever the global background color is
+        return [0, 0, 0, 0];
+    } else {
+        return pixel;
     }
 }
 
