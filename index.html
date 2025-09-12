@@ -95,10 +95,10 @@
             return getLevelNodes().map((element) => ({
                 range: element.querySelector("input[type=\"range\"].level-range"),
                 glyphs: Array.from(element.querySelector(".level-glyph-list").children)
-                            .filter((child) => child.nodeName == "IMG")
+                            .filter((child) => child.classList.contains("level-glyph"))
                             .map((child) => ({
                                 node: child,
-                                character: child.className
+                                character: child.characterValue
                             })),
             }));
         }
@@ -134,6 +134,28 @@
                 range.setAttribute("min", 0);
                 range.value = 0.5;
             }
+
+            const addGlyphButton = level.querySelector(".level-glyph-control > .level-add-glyph");
+            const removeGlyphButton = level.querySelector(".level-glyph-control > .level-remove-glyph");
+            removeGlyphButton.disabled = true;
+            addGlyphButton.addEventListener("click", () => {
+                const glyph = document.createElement("div");
+                glyph.classList.add("level-glyph");
+                glyph.append(document.getElementById("level-glyph-template")
+                    .content.cloneNode(true));
+                glyph.characterValue = null;
+                level.querySelector(".level-glyph-list").appendChild(glyph);
+                removeGlyphButton.disabled = false;
+            });
+            removeGlyphButton.addEventListener("click", () => {
+                const list = level.querySelector(".level-glyph-list");
+                const glyphs = Array.from(list.children)
+                    .filter((element) => element.classList.contains("level-glyph"));
+                if (glyphs.length > 0) {
+                    if (glyphs.length == 1) removeGlyphButton.disabled = true;
+                    list.removeChild(glyphs.at(-1));
+                }
+            });
 
             document.getElementById("levels").appendChild(level);
         }
@@ -195,14 +217,15 @@
     </div>
     <div id="levels">
         <template id="level-template">
-            <input type="range" class="level-range" step="any" max="1" style="inline-size:100%">
+            <input type="range" class="level-range" step="any" max="1" style="inline-size:100%;">
             <div class="level-glyph-control">
-                <input type="button" class="level-add-glyph" value="Add glyph">
                 <input type="button" class="level-remove-glyph" value="Remove glyph">
+                <input type="button" class="level-add-glyph" value="Add glyph">
             </div>
             <div class="level-glyph-list">
-                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB0klEQVRYR+2WSyhEURjHx/uVxMKjlDySSCzETlE2UkQpkg0LUuztZaeUV7FSlCTJimJjIUlskOy8l0qxk9+/ztRNZs41nWk296tf37lz7vzPf777nTM3KZTgSErw+qHAQFCB/1SgkIbtgjZogDLIhnd4hmNYh6v/NLZfA32IbkGKRfyb+SWYAo2t4dfAKEqrRu2BfAb38AG50AgdkGbuWSGPW1fnBr8Ghrm3HRbhPIJwHZ8fQZGZbyJf2Ez4NWDTCc9PMFgwF7PkadsXXRuoZcFrs+geuSdeBnIQroA8yPA8ygLGalbFCbS6NJCFmEo8BPWQbBFXrzS7MlCO0CFU2QQ982pANWLU8NMD2lqXoC5X6BnPmRI/kb88K5QwfjHXzgz0IrhjRLX/dRJ6F/X+whoubl0bmEdw0oj2k7ej1FRdv+vawCaCA0ZUXa3ujhRrTIy4NrCM4JgR1S7QWf9XqPzqlUzXBgYR3DCir+QWePzlQA26D9ot4XDWhOko3kClUf4k67C5g1TQXu80Y1Ur/CfkzIDW1RF7AKURyq+P9WhmQO8GCqcGJJgP2g3dUA16N3iDU1Dz6YWkGPSY4mIgyo+PfcrPSRi7uo9vBgaCCgQV+AGxpEoh5HqrQAAAAABJRU5ErkJggg==">
-                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB0klEQVRYR+2WSyhEURjHx/uVxMKjlDySSCzETlE2UkQpkg0LUuztZaeUV7FSlCTJimJjIUlskOy8l0qxk9+/ztRNZs41nWk296tf37lz7vzPf777nTM3KZTgSErw+qHAQFCB/1SgkIbtgjZogDLIhnd4hmNYh6v/NLZfA32IbkGKRfyb+SWYAo2t4dfAKEqrRu2BfAb38AG50AgdkGbuWSGPW1fnBr8Ghrm3HRbhPIJwHZ8fQZGZbyJf2Ez4NWDTCc9PMFgwF7PkadsXXRuoZcFrs+geuSdeBnIQroA8yPA8ygLGalbFCbS6NJCFmEo8BPWQbBFXrzS7MlCO0CFU2QQ982pANWLU8NMD2lqXoC5X6BnPmRI/kb88K5QwfjHXzgz0IrhjRLX/dRJ6F/X+whoubl0bmEdw0oj2k7ej1FRdv+vawCaCA0ZUXa3ujhRrTIy4NrCM4JgR1S7QWf9XqPzqlUzXBgYR3DCir+QWePzlQA26D9ot4XDWhOko3kClUf4k67C5g1TQXu80Y1Ur/CfkzIDW1RF7AKURyq+P9WhmQO8GCqcGJJgP2g3dUA16N3iDU1Dz6YWkGPSY4mIgyo+PfcrPSRi7uo9vBgaCCgQV+AGxpEoh5HqrQAAAAABJRU5ErkJggg==">
+                <template id="level-glyph-template">
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB0klEQVRYR+2WSyhEURjHx/uVxMKjlDySSCzETlE2UkQpkg0LUuztZaeUV7FSlCTJimJjIUlskOy8l0qxk9+/ztRNZs41nWk296tf37lz7vzPf777nTM3KZTgSErw+qHAQFCB/1SgkIbtgjZogDLIhnd4hmNYh6v/NLZfA32IbkGKRfyb+SWYAo2t4dfAKEqrRu2BfAb38AG50AgdkGbuWSGPW1fnBr8Ghrm3HRbhPIJwHZ8fQZGZbyJf2Ez4NWDTCc9PMFgwF7PkadsXXRuoZcFrs+geuSdeBnIQroA8yPA8ygLGalbFCbS6NJCFmEo8BPWQbBFXrzS7MlCO0CFU2QQ982pANWLU8NMD2lqXoC5X6BnPmRI/kb88K5QwfjHXzgz0IrhjRLX/dRJ6F/X+whoubl0bmEdw0oj2k7ej1FRdv+vawCaCA0ZUXa3ujhRrTIy4NrCM4JgR1S7QWf9XqPzqlUzXBgYR3DCir+QWePzlQA26D9ot4XDWhOko3kClUf4k67C5g1TQXu80Y1Ur/CfkzIDW1RF7AKURyq+P9WhmQO8GCqcGJJgP2g3dUA16N3iDU1Dz6YWkGPSY4mIgyo+PfcrPSRi7uo9vBgaCCgQV+AGxpEoh5HqrQAAAAABJRU5ErkJggg==">
+                </template>
             </div>
         </template>
     </div>
