@@ -154,14 +154,12 @@
                 const img = glyph.querySelector("img");
                 glyph.querySelector(".level-glyph-input")
                     .addEventListener("change", (e) => {
-                        if (e.target.value.length == 1 &&
-                            e.target.value != ' ') {
-                            glyph.characterValue = e.target.value;
-                            img.src = cc.writeGlyph(e.target.value);
-                        } else if (e.target.value.length == 0 ||
-                                   e.target.value == ' ') {
+                        if (e.target.value == ' ' || e.target.value == 0) {
                             glyph.characterValue = null;
                             img.src = '';
+                        } else if (e.target.value.length == 1) {
+                            glyph.characterValue = e.target.value;
+                            img.src = cc.writeGlyph(e.target.value);
                         } else {
                             console.error(`unexpected glyph input string \"${e.target.value}\"`);
                         }
