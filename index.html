@@ -14,6 +14,10 @@
             display: flex;
             flex-direction: row;
         }
+
+        .level-glyph-input {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -146,6 +150,18 @@
                 glyph.characterValue = null;
                 level.querySelector(".level-glyph-list").appendChild(glyph);
                 removeGlyphButton.disabled = false;
+
+                const img = glyph.querySelector("img");
+                glyph.querySelector(".level-glyph-input")
+                    .addEventListener("change", (e) => {
+                        if (e.target.value.length == 1) {
+                            glyph.characterValue = e.target.value;
+                            img.src = cc.writeGlyph(e.target.value);
+                        } else {
+                            glyph.characterValue = null;
+                            img.src = '';
+                        }
+                    });
             });
             removeGlyphButton.addEventListener("click", () => {
                 const list = level.querySelector(".level-glyph-list");
@@ -224,7 +240,8 @@
             </div>
             <div class="level-glyph-list">
                 <template id="level-glyph-template">
-                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB0klEQVRYR+2WSyhEURjHx/uVxMKjlDySSCzETlE2UkQpkg0LUuztZaeUV7FSlCTJimJjIUlskOy8l0qxk9+/ztRNZs41nWk296tf37lz7vzPf777nTM3KZTgSErw+qHAQFCB/1SgkIbtgjZogDLIhnd4hmNYh6v/NLZfA32IbkGKRfyb+SWYAo2t4dfAKEqrRu2BfAb38AG50AgdkGbuWSGPW1fnBr8Ghrm3HRbhPIJwHZ8fQZGZbyJf2Ez4NWDTCc9PMFgwF7PkadsXXRuoZcFrs+geuSdeBnIQroA8yPA8ygLGalbFCbS6NJCFmEo8BPWQbBFXrzS7MlCO0CFU2QQ982pANWLU8NMD2lqXoC5X6BnPmRI/kb88K5QwfjHXzgz0IrhjRLX/dRJ6F/X+whoubl0bmEdw0oj2k7ej1FRdv+vawCaCA0ZUXa3ujhRrTIy4NrCM4JgR1S7QWf9XqPzqlUzXBgYR3DCir+QWePzlQA26D9ot4XDWhOko3kClUf4k67C5g1TQXu80Y1Ur/CfkzIDW1RF7AKURyq+P9WhmQO8GCqcGJJgP2g3dUA16N3iDU1Dz6YWkGPSY4mIgyo+PfcrPSRi7uo9vBgaCCgQV+AGxpEoh5HqrQAAAAABJRU5ErkJggg==">
+                    <img>
+                    <input type="text" class="level-glyph-input" maxlength="1" size="1">
                 </template>
             </div>
         </template>
