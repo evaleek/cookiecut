@@ -7,25 +7,12 @@
     <style>
         #levels {
             display: flex;
-        }
-
-        #level-ranges {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
-
-        #level-ranges > * {
-            flex: 1;
-        }
-
-        #level-glyph-lists {
-            display: flex;
             flex-direction: column;
         }
 
-        #level-glyph-lists * {
-            flex: 1;
+        .level {
+            display: flex;
+            flex-direction: row;
         }
     </style>
 </head>
@@ -99,91 +86,83 @@
             output.value = characters.map((row) => row.join('')).join('\n');
         }
 
-        function getLevels() {
-            const ranges = Array.from(
-                document.getElementById("level-ranges").children)
-                .filter((element) => element.nodeName == "INPUT" &&
-                                     element.getAttribute("type") == "range" &&
-                                     element.classList.contains("level-range"));
-            const glyphLists = Array.from(
-                document.getElementById("level-glyph-lists").children)
-                .filter((element) => element.nodeName == "DIV" &&
-                                     element.classList.contains("level-glyph-list"));
-            if (ranges.length != glyphLists.length) {
-                console.warn("found " + ranges.length +
-                " level ranges but " + glyphLists.length +
-                " glyph lists in the levels node");
-            }
+        function getLevelNodes() {
+            return Array.from(document.getElementById("levels").children)
+                .filter((element) => element.classList.contains("level"));
+        }
 
-            return ranges.map((range, idx) => ({
-                range: range,
-                glyphs: {
-                    node: glyphLists[idx],
-                    glyphs: Array.from(glyphLists[idx].children)
-                                .filter((child) => child.nodeName == "IMG")
-                                .map((child) => ({
-                                    node: child,
-                                    character: child.className,
-                                })),
-                },
+        function getLevels() {
+            return getLevelNodes().map((element) => ({
+                range: element.querySelector("input[type=\"range\"].level-range"),
+                glyphs: Array.from(element.querySelector(".level-glyph-list").children)
+                            .filter((child) => child.nodeName == "IMG")
+                            .map((child) => ({
+                                node: child,
+                                character: child.className
+                            })),
             }));
         }
 
         function onAddLevel() {
-            const levelRange = document.getElementById("range-template")
-                                       .content.cloneNode(true)
-                                       .firstElementChild;
-            const levelNodes = getLevels();
-            if (levelNodes.length > 0) {
-                const tailLevel = levelNodes.map((level) => level.range).at(-1);
-                const floorValue = Number(tailLevel.value);
-                const midValue = floorValue + ((1.0 - floorValue)*0.5);
-                const size = Math.min(Math.round((1.0 - floorValue)*100), 100);
+            const level = document.createElement("div");
+            level.classList.add("level");
+            level.append(document.getElementById("level-template")
+                .content.cloneNode(true));
 
-                levelRange.style.inlineSize = `${size}%`;
-                levelRange.setAttribute("min", floorValue);
-                levelRange.value = midValue;
+            const range = level.querySelector("input[type=\"range\"].level-range");
+            const ranges = getLevels().map((l) => l.range);
+            if (ranges.length > 0) {
+                const lastRange = ranges.at(-1);
+                const floor = Number(lastRange.value);
+                const mid = floor + (1-floor)*0.5;
+                const size = Math.min(Math.round((1-floor)*100), 100);
 
-                levelRange.inputListener = (e) => {
+                range.style.inlineSize = `${size}%`;
+                range.setAttribute("min", floor);
+                range.value = mid;
+
+                range.inputListener = (e) => {
                     const newFloor = Number(e.target.value);
                     const newSize = Math.min(Math.round((1.0 - newFloor)*100), 100);
-                    levelRange.style.inlineSize = `${newSize}%`;
-                    levelRange.setAttribute("min", newFloor);
-                    levelRange.dispatchEvent(new Event("input"));
+                    range.style.inlineSize = `${newSize}%`;
+                    range.setAttribute("min", newFloor);
+                    range.dispatchEvent(new Event("input"));
                 };
-                tailLevel.addEventListener("input", levelRange.inputListener);
+                lastRange.addEventListener("input", range.inputListener);
             } else {
-                levelRange.style.inlineSize = "100%";
-                levelRange.setAttribute("min", 0);
-                levelRange.value = 0.5;
+                range.style.inlineSize = "100%";
+                range.setAttribute("min", 0);
+                range.value = 0.5;
             }
 
-
-            document.getElementById("level-ranges").appendChild(levelRange);
-
-            const levelGlyphs = document.getElementById("glyph-list-template")
-                                        .content.cloneNode(true)
-                                        .firstElementChild;
-            document.getElementById("level-glyph-lists").appendChild(levelGlyphs);
+            document.getElementById("levels").appendChild(level);
         }
 
         function onRemoveLevel() {
-            const levelNodes = getLevels();
+            const levelNodes = getLevelNodes();
+
             if (levelNodes.length > 0) {
-                const lastLevel = levelNodes.at(-1);
-                if (lastLevel.range.inputListener) {
-                    lastLevel.range.removeEventListener("input",
-                        lastLevel.range.inputListener);
+                const last = levelNodes.at(-1);
+                if (last.range.inputListener) {
+                    const secondToLast = levelNodes.at(-2);
+                    if (secondToLast) {
+                        secondToLast.range.removeEventListener("input",
+                            last.range.inputListener);
+                    } else {
+                        console.error("expected removed level node to have " +
+                            "a parent with the matching input listener");
+                    }
+                } else if (levelNodes.length != 1) {
+                    console.error("expected removed level node to have " +
+                        "an input listener");
                 }
-                document.getElementById("level-ranges")
-                    .removeChild(lastLevel.range);
-                document.getElementById("level-glyph-lists")
-                    .removeChild(lastLevel.glyphs.node);
+
+                document.getElementById("levels").removeChild(last);
             }
         }
 
         function onChangeLevels() {
-            if (getLevels()?.length > 0) {
+            if (getLevelNodes()?.length > 0) {
                 removeLevel.disabled = false;
             } else {
                 removeLevel.disabled = true;
@@ -215,17 +194,17 @@
         <input type="button" id="add-level" value="Add level">
     </div>
     <div id="levels">
-        <div id="level-ranges">
-            <template id="range-template">
-                <input type="range" class="level-range" step="any" max="1" style="inline-size:100%">
-            </template>
-        </div>
-        <div id="level-glyph-lists">
-            <template id="glyph-list-template"><div class="level-glyph-list">
+        <template id="level-template">
+            <input type="range" class="level-range" step="any" max="1" style="inline-size:100%">
+            <div class="level-glyph-control">
+                <input type="button" class="level-add-glyph" value="Add glyph">
+                <input type="button" class="level-remove-glyph" value="Remove glyph">
+            </div>
+            <div class="level-glyph-list">
                 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB0klEQVRYR+2WSyhEURjHx/uVxMKjlDySSCzETlE2UkQpkg0LUuztZaeUV7FSlCTJimJjIUlskOy8l0qxk9+/ztRNZs41nWk296tf37lz7vzPf777nTM3KZTgSErw+qHAQFCB/1SgkIbtgjZogDLIhnd4hmNYh6v/NLZfA32IbkGKRfyb+SWYAo2t4dfAKEqrRu2BfAb38AG50AgdkGbuWSGPW1fnBr8Ghrm3HRbhPIJwHZ8fQZGZbyJf2Ez4NWDTCc9PMFgwF7PkadsXXRuoZcFrs+geuSdeBnIQroA8yPA8ygLGalbFCbS6NJCFmEo8BPWQbBFXrzS7MlCO0CFU2QQ982pANWLU8NMD2lqXoC5X6BnPmRI/kb88K5QwfjHXzgz0IrhjRLX/dRJ6F/X+whoubl0bmEdw0oj2k7ej1FRdv+vawCaCA0ZUXa3ujhRrTIy4NrCM4JgR1S7QWf9XqPzqlUzXBgYR3DCir+QWePzlQA26D9ot4XDWhOko3kClUf4k67C5g1TQXu80Y1Ur/CfkzIDW1RF7AKURyq+P9WhmQO8GCqcGJJgP2g3dUA16N3iDU1Dz6YWkGPSY4mIgyo+PfcrPSRi7uo9vBgaCCgQV+AGxpEoh5HqrQAAAAABJRU5ErkJggg==">
                 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB0klEQVRYR+2WSyhEURjHx/uVxMKjlDySSCzETlE2UkQpkg0LUuztZaeUV7FSlCTJimJjIUlskOy8l0qxk9+/ztRNZs41nWk296tf37lz7vzPf777nTM3KZTgSErw+qHAQFCB/1SgkIbtgjZogDLIhnd4hmNYh6v/NLZfA32IbkGKRfyb+SWYAo2t4dfAKEqrRu2BfAb38AG50AgdkGbuWSGPW1fnBr8Ghrm3HRbhPIJwHZ8fQZGZbyJf2Ez4NWDTCc9PMFgwF7PkadsXXRuoZcFrs+geuSdeBnIQroA8yPA8ygLGalbFCbS6NJCFmEo8BPWQbBFXrzS7MlCO0CFU2QQ982pANWLU8NMD2lqXoC5X6BnPmRI/kb88K5QwfjHXzgz0IrhjRLX/dRJ6F/X+whoubl0bmEdw0oj2k7ej1FRdv+vawCaCA0ZUXa3ujhRrTIy4NrCM4JgR1S7QWf9XqPzqlUzXBgYR3DCir+QWePzlQA26D9ot4XDWhOko3kClUf4k67C5g1TQXu80Y1Ur/CfkzIDW1RF7AKURyq+P9WhmQO8GCqcGJJgP2g3dUA16N3iDU1Dz6YWkGPSY4mIgyo+PfcrPSRi7uo9vBgaCCgQV+AGxpEoh5HqrQAAAAABJRU5ErkJggg==">
-            </div></template>
-        </div>
+            </div>
+        </template>
     </div>
     <div id="active-glyphs"></div>
     <textarea id="output" readonly></textarea>
