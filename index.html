@@ -32,7 +32,6 @@
         const addLevel = document.getElementById("add-level");
         const removeLevel = document.getElementById("remove-level");
         const levels = document.getElementById("levels");
-        const activeGlyphs = document.getElementById("active-glyphs");
         const output = document.getElementById("output");
 
         // TODO check for WebGL support and fail clearly to user
@@ -46,7 +45,9 @@
                     image.onload = function() {
                         cc.setImage(image);
                         canvas.style.display = "inline";
-                        writeOutput(cc.findCellMatches());
+                        writeOutput(cc.findCellMatches(getLevels()
+                            .map((level) => [level.range.value,
+                                level.glyphs.map((glyph) => glyph.character)])));
                         canvas.width = cc.imageSize[0];
                         canvas.height = cc.imageSize[1];
                         cc.drawMeans();
@@ -61,26 +62,6 @@
                 if (len > 1) {
                     console.error("unexpected file upload count " + len);
                 }
-            }
-        }
-
-        function setGlyphs(characters) {
-            for (const character of characters) {
-                if (character.length != 1 || typeof character !== 'string')
-                    throw new Error("character parameter was not a length-1 string");
-            }
-
-            cc.setGlyphs(characters);
-
-            while (activeGlyphs.firstChild) {
-                activeGlyphs.removeChild(activeGlyphs.firstChild);
-            }
-
-            const glyphs = cc.writeGlyphs(characters);
-            for (const glyph of glyphs) {
-                let img = document.createElement('img');
-                img.src = glyph;
-                activeGlyphs.appendChild(img);
             }
         }
 
@@ -118,12 +99,11 @@
             if (ranges.length > 0) {
                 const lastRange = ranges.at(-1);
                 const floor = Number(lastRange.value);
-                const mid = floor + (1-floor)*0.5;
                 const size = Math.min(Math.round((1-floor)*100), 100);
 
                 range.style.inlineSize = `${size}%`;
                 range.setAttribute("min", floor);
-                range.value = mid;
+                range.value = 1.0;
 
                 range.inputListener = (e) => {
                     const newFloor = Number(e.target.value);
@@ -136,7 +116,7 @@
             } else {
                 range.style.inlineSize = "100%";
                 range.setAttribute("min", 0);
-                range.value = 0.5;
+                range.value = 1.0;
             }
 
             const addGlyphButton = level.querySelector(".level-glyph-control > .level-add-glyph");
@@ -153,12 +133,17 @@
 
                 const img = glyph.querySelector("img");
                 glyph.querySelector(".level-glyph-input")
-                    .addEventListener("change", (e) => {
+                    .addEventListener("input", (e) => {
+                        if (glyph.characterValue != null) {
+                            cc.removeGlyph(glyph.characterValue);
+                        }
+
                         if (e.target.value == ' ' || e.target.value == 0) {
                             glyph.characterValue = null;
                             img.src = '';
                         } else if (e.target.value.length == 1) {
                             glyph.characterValue = e.target.value;
+                            cc.addGlyph(e.target.value);
                             img.src = cc.writeGlyph(e.target.value);
                         } else {
                             console.error(`unexpected glyph input string \"${e.target.value}\"`);
@@ -183,11 +168,12 @@
 
             if (levelNodes.length > 0) {
                 const last = levelNodes.at(-1);
-                if (last.range.inputListener) {
+                const lastRange = last.querySelector("input[type=\"range\"].level-range");
+                if (lastRange.inputListener) {
                     const secondToLast = levelNodes.at(-2);
                     if (secondToLast) {
-                        secondToLast.range.removeEventListener("input",
-                            last.range.inputListener);
+                        secondToLast.querySelector("input[type=\"range\"].level-range")
+                            .removeEventListener("input", lastRange.inputListener);
                     } else {
                         console.error("expected removed level node to have " +
                             "a parent with the matching input listener");
@@ -221,7 +207,6 @@
         removeLevel.addEventListener("click", onChangeLevels);
         onChangeLevels();
 
-        setGlyphs(['.', ':', ' ']);
         onImageUpload();
 
     </script>
@@ -248,7 +233,6 @@
             </div>
         </template>
     </div>
-    <div id="active-glyphs"></div>
     <textarea id="output" readonly></textarea>
 </body>
 </html>

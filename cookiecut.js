@@ -151,12 +151,112 @@ export function setImage(image) {
     refresh();
 }
 
-export function setGlyphs(characters) {
-    for (const character of characters) {
-        if (character.length != 1 || typeof character !== 'string')
-            throw new Error("character parameter was not a length-1 string");
+export function addGlyph(character) {
+    if (character.length != 1 || typeof character !== 'string') {
+        throw new Error("character parameter was not a length-1 string");
     }
-    glyphs = computeGlyphDcts(characters).map((dct, idx) => [characters[idx], dct]);
+    if (!glyphs) glyphs = new Map([
+        [' ', {
+            references: Infinity,
+            dct: computeGlyphDcts([' ']),
+        }]
+    ]);
+
+    if (!glyphs.has(character)) {
+        glyphs.set(character, {
+            references: 0,
+            dct: computeGlyphDcts([character])
+        });
+    }
+    const entry = glyphs.get(character);
+    entry.references += 1;
+}
+
+export function removeGlyph(character) {
+    if (character.length != 1 || typeof character !== 'string') {
+        throw new Error("character parameter was not a length-1 string");
+    }
+    if (!glyphs) console.warn("glyph removal call for uninitialized glyphs map");
+
+    const entry = glyphs.get(character);
+    if (entry) {
+        if (entry.references == 1) {
+            glyphs.delete(character);
+        } else if (entry.references > 1) {
+            entry.references -= 1;
+        } else {
+            console.error(`indexed glyph \"${character}\" had ref count ${entry.references}`);
+        }
+    } else {
+        console.warn(`glyph removal call for unindexed glyph \"${character}\"`);
+    }
+}
+
+export function findCellMatches(levels) {
+    if (!imageDCT) throw new Error("image DCT was not computed");
+    if (!imageMeans) throw new Error("image value means were not computed");
+    if (!glyphs) {
+        console.warn("computing cell matches with no glyphs initialized");
+        return imageDCT.map((row) => row.map(() => ' '));
+    }
+    if (!levels) {
+        console.warn("computing cell matches with no levels");
+        return imageDCT.map((row) => row.map(() => ' '));
+    }
+
+    const thresholds = levels.map((level) => level[0]);
+    const glyphLists = levels.map((level) => level[1]);
+
+    {
+        let last = 0.0;
+        let fail = false;
+        for (const threshold of thresholds) {
+            if (threshold < last) {
+                fail = true;
+                break;
+            }
+            last = threshold;
+        }
+        if (fail) {
+            console.warn("non-ascending level thresholds: " + thresholds);
+        }
+    }
+
+    return imageDCT.map((row, rowIdx) => row.map((dct, colIdx) => {
+        const mean = imageMeans[rowIdx][colIdx];
+        const value = ((mean[0]+mean[1]+mean[2])/3)*mean[3];
+
+        let levelIdx = 0;
+        for (const threshold of thresholds) {
+            if (value > threshold) {
+                levelIdx += 1;
+            } else {
+                break;
+            }
+        }
+        if (levelIdx >= levels.length) return ' ';
+
+        const glyphList = glyphLists[levelIdx].map((glyph) => glyph ?? ' ');
+
+        if (glyphList.length == 1) {
+            return glyphList[0];
+        } else if (glyphList.length == 0) {
+            return ' ';
+        }
+
+        const closestIdx = glyphList.map((glyph) => {
+                const glyphDct = glyphs.get(glyph)?.dct;
+                if (!glyphDct) {
+                    console.warn(`matching DCT of an unindexed glyph \'${glyph}\'`);
+                    glyphDct = computeGlyphDcts([glyph]);
+                }
+                return glyphDct;
+            })
+            .map((glyphDct) => dctDistance(dct, glyphDct))
+            .reduce((leastIdx, dist, curIdx, distances) =>
+                (dist < distances[leastIdx]) ? curIdx : leastIdx, 0);
+        return glyphList[closestIdx];
+    }));
 }
 
 export function refresh() {
@@ -317,14 +417,6 @@ function masked(pixel) {
     } else {
         return pixel;
     }
-}
-
-export function findCellMatches() {
-    if (!imageDCT) throw new Error("image DCT was not computed");
-    if (!glyphs) throw new Error("glyphs were not set");
-
-    return imageDCT.map((row) => row.map((dct) => glyphs.reduce(
-        (a, b) => (dctDistance(dct, b[1]) < dctDistance(dct, a[1])) ? b : a)[0]));
 }
 
 export function writeGlyph(character, size, color, drawingContext) {
