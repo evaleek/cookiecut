@@ -77,14 +77,14 @@ const dctFragmentSource = (cellSize) => `
                 vec2 cellPixel = vec2(cellPixelX, cellPixelY);
                 float pixelValue = length(texture2D(image,
                     cellPixel * pixelSize + cellBase)) * 0.5;
-                vec2 dctXY = pixelValue * cos(
+                vec2 dctXY = pixelValue * ( 1.0 + cos(
                     (vec2(3.1415926538)/cellPixelSize)
                     * (cellPixel+0.5)
-                    * freqUV);
-                dct += dctXY.x + dctXY.y;
+                    * freqUV));
+                dct += 0.25*(dctXY.x+dctXY.y);
             }
         }
-        gl_FragColor = vec4(dct, 0, 0, 1);
+        gl_FragColor = vec4(dct/(cellPixelSize.x*cellPixelSize.y), 0, 0, 1);
     }
 `;
 
