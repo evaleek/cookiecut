@@ -158,7 +158,7 @@ export function addGlyph(character) {
     if (!glyphs) glyphs = new Map([
         [' ', {
             references: Infinity,
-            dct: computeGlyphDcts([' ']),
+            dct: computeGlyphDcts([' '])
         }]
     ]);
 
@@ -338,28 +338,27 @@ export function refresh() {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         imageMeans = imagePixels.map((row) => row.map((block) => {
-            const pixelsMean = (pixels) => pixels
-                .reduce((a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2], a[3]+b[3]])
-                .map((component) => component/pixels.length);
-            return pixelsMean(block.map((row) => pixelsMean(row)));
+            const flat = block.flat(1);
+            const pixels = flat.filter((p) => p); // only non-null
+            if (pixels.length == 0) return [0, 0, 0, 0];
+            const premultipliedAlphaMean = pixels
+                .map((pixel) => [pixel[0]*pixel[3],
+                                 pixel[1]*pixel[3],
+                                 pixel[2]*pixel[3],
+                                 pixel[3]])
+                .reduce((a, b) => a.map((aC, i) => aC + b[i]))
+                .map((component) => component / pixels.length);
+            if (premultipliedAlphaMean[3] > 0) {
+                const r = premultipliedAlphaMean[0] / premultipliedAlphaMean[3];
+                const g = premultipliedAlphaMean[1] / premultipliedAlphaMean[3];
+                const b = premultipliedAlphaMean[2] / premultipliedAlphaMean[3];
+                const a = ( flat.map((pixel) => pixel ? pixel[3] : 0)
+                                .reduce((a, b) => a + b) ) / flat.length;
+                return [r, g, b, a];
+            } else {
+                return [0, 0, 0, 0];
+            }
         }));
-
-        //const meanPixelWidth = imageMeans.length;
-        //const meanPixelHeight = imageMeans[0].length;
-
-        //const cellMeansTexture = gl.createTexture();
-        //gl.bindTexture(gl.TEXTURE_2D, cellMeansTexture);
-        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        //gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, meanPixelWidth, meanPixelHeight,
-        //    0, gl.RGBA, gl.UNSIGNED_BYTE,
-        //    Uint8Array.from(imageMeans.flat(2).map((x) => Math.trunc(x*255)))
-        //);
-
-        //gl.clear(gl.COLOR_BUFFER_BIT);
-        //gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 }
 
@@ -412,8 +411,7 @@ function masked(pixel) {
     const pRGB = pixel.slice(0, 3);
     if (maskRGBs && ( maskRGBs.some((maskRGB) => pRGB.every((p, i) =>
             Math.abs(maskRGB[i] - p) < maskEpsilon)) )) {
-        // TODO return whatever the global background color is
-        return [0, 0, 0, 0];
+        return null;
     } else {
         return pixel;
     }
