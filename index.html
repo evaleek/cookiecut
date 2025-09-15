@@ -201,6 +201,13 @@
         cellSize.addEventListener("change", (e) => {
             cc.setCellSize(e.target.value);
         });
+        cellSize.addEventListener("input", (e) => {
+            cc.setCellSize(e.target.value);
+            getLevels().map((level) => level.glyphs.map(
+                (glyph) => glyph.node.querySelector(".level-glyph-input")))
+                .flat()
+                .forEach((img) => img.dispatchEvent(new Event("input")));
+        });
         addLevel.addEventListener("click", onAddLevel);
         addLevel.addEventListener("click", onChangeLevels);
         removeLevel.addEventListener("click", onRemoveLevel);
