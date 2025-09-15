@@ -91,8 +91,17 @@ const dctFragmentSource = (cellSize) => `
 export const supported = () => typeof WebGLRenderingContext !== 'undefined';
 
 function dctDistance(a, b) {
-    const b_flat = b.flat();
-    const zip = a.flat().map((x, idx) => [x, b_flat[idx]]);
+    const maxRow = a.length - 1;
+    const maxColumn = a[0].length - 1;
+    const maxIdx = maxRow + maxColumn + 1;
+    // +1 because we want to count even the farthest entry a little bit
+
+    // Deweight entries the farther down and right they are
+    const deweight = (dct) => dct.map((row, rowIdx) => row.map((x, colIdx) =>
+        x * (1-( (rowIdx+colIdx) / maxIdx ))));
+
+    const b_flat = deweight(b).flat();
+    const zip = deweight(a).flat().map((x, idx) => [x, b_flat[idx]]);
     return zip.reduce((acc, x) => acc + Math.abs(x[1]-x[0]), 0);
 }
 
@@ -158,14 +167,14 @@ export function addGlyph(character) {
     if (!glyphs) glyphs = new Map([
         [' ', {
             references: Infinity,
-            dct: computeGlyphDcts([' '])
+            dct: computeGlyphDcts([' '])[0]
         }]
     ]);
 
     if (!glyphs.has(character)) {
         glyphs.set(character, {
             references: 0,
-            dct: computeGlyphDcts([character])
+            dct: computeGlyphDcts([character])[0]
         });
     }
     const entry = glyphs.get(character);
@@ -245,10 +254,10 @@ export function findCellMatches(levels) {
         }
 
         const closestIdx = glyphList.map((glyph) => {
-                const glyphDct = glyphs.get(glyph)?.dct;
+                let glyphDct = glyphs.get(glyph)?.dct;
                 if (!glyphDct) {
                     console.warn(`matching DCT of an unindexed glyph \'${glyph}\'`);
-                    glyphDct = computeGlyphDcts([glyph]);
+                    glyphDct = computeGlyphDcts([glyph])[0];
                 }
                 return glyphDct;
             })
