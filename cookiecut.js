@@ -340,15 +340,24 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
     }
 `;
 
+// Below ~6px, all glyphs look too similar.
+const glyphPxMinimum = 6;
+
+const defaultMaskEpsilon = 0.06;
+
 const isPositiveInteger = (val) => ( val>0 && Number.isInteger(val) );
 const isCellSize = (cellSize) => (
     cellSize.length && cellSize.length >= 2 &&
     isPositiveInteger(cellSize[0]) && isPositiveInteger(cellSize[1])
 );
 
-export function Context(cellSizes, canvas) {
+export const colorDistance = (a, b) => Math.hypot(...(a.map((aC, i) => aC - b[i])));
+
+export function Context(canvas, cellSizes) {
     this.gl = (canvas ?? document.createElement("canvas")).getContext("webgl");
     if (!this.gl) throw new Error("could not initialize WebGL");
+
+    this.gl.clearColor(0, 0, 0, 0);
 
     this.redrawProgram = compileShaders(this.gl,
         fullscreenQuadVertexSource,
@@ -398,9 +407,18 @@ export function Context(cellSizes, canvas) {
             this.dctPrograms.clear();
         }
     };
+
+    this.drawFrame = () => {
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        this.gl.drawArrays(gl.TRIANGLES, 0, 3);
+    };
 }
 
 function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
+    if (!isCellSize(cellSize))
+        throw new Error("unexpected cell size value: " + cellSize);
+    this.cellSize = cellSize;
+
     const width = cellSize[0] * cellCount[0];
     const height = cellSize[1] * cellCount[1];
 
@@ -418,14 +436,21 @@ function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
         gl.TEXTURE_2D, this.texture, 0);
 
+    this.enabled = enabled;
     if (!enabled) gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
-    this.enable = () => gl.BindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-    this.disable = () => gl.BindFramebuffer(gl.FRAMEBUFFER, null);
+    this.enable = () => {
+        gl.BindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        this.enabled = true;
+    }
+    this.disable = () => {
+        gl.BindFramebuffer(gl.FRAMEBUFFER, null);
+        this.enabled = false;
+    }
 
     this.readCells = function (mapPixel) {
-        this.pixelBuffer ??= new Uint8Array(width*height*4);
+        let pixelBuffer = new Uint8Array(width*height*4);
         gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBuffer);
         return new Array(cellCount[1]).fill()
             .map((_, gridRow) => new Array(cellCount[0]).fill()
@@ -438,14 +463,31 @@ function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
                                  + pixelRowCellOffset;
                 const pixelColumn = gridColumn * cellSize[0] + cellColumn;
                 const index = (pixelRow * width + pixelColumn) * 4;
-                const pixel = this.pixelBuffer.slice(index, index+4);
+                const pixel = pixelBuffer.slice(index, index+4);
                 return mapPixel ? mapPixel(pixel) : pixel;
         }))));
     };
 }
 
+export const getImageSizeLimit = (gl) =>
+    Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE),
+             gl.getParameter(gl.MAX_VIEWPORT_DIMS));
+
 export function Image(context, img) {
     const gl = context.gl;
+
+    this.size = [img.naturalWidth, img.naturalHeight];
+
+    const sizeLimit = getImageSizeLimit(gl);
+    this.textureSizeClipped = this.size.map[0] > sizeLimit ||
+                              this.size.map[1] > sizeLimit;
+    if (this.textureSizeClipped) {
+        const overScale = Math.max(...(this.size.map((l) => l/sizeLimit)));
+        this.size = this.size.map((l) => Math.floor(l/overScale));
+        img = img.clone();
+        img.width = this.size[0];
+        img.height = this.size[1];
+    }
 
     this.texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -455,6 +497,73 @@ export function Image(context, img) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
     gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+export function computeCellMeans(context, processingBuffer, image, masks, maskEpsilon) {
+    if (!processingBuffer.enabled) processingBuffer.enable();
+    context.gl.bindTexture(gl.TEXTURE_2D, image.texture);
+    context.gl.useProgram(context.redrawProgram);
+    context.drawFrame();
+
+    const epsilon = maskEpsilon ?? defaultMaskEpsilon;
+    const maskPixel = masks ? ( (pixel) => {
+        const rgb = pixel.slice(0, 3);
+        return (masks.some((mask) => colorDistance(rgb, mask) < epsilon))
+            ? null
+            : pixel;
+    }) : (pixel) => pixel;
+
+    const pixels = processingBuffer.readCells(
+        (pixel) => maskPixel(Array.from(pixel, (x) => x/255)));
+    const means = pixels.map((row) => row.map(cell) => {
+        const flat = block.flat(1);
+        const flatPixels = flat.filter((p) => p); // only-non-null
+        if (flatPixels.length == 0) return [0, 0, 0, 0];
+        const premultipliedAlphaMean = flatPixels
+            .map((pixel) => [pixel[0]*pixel[3],
+                             pixel[1]*pixel[3],
+                             pixel[2]*pixel[3],
+                             pixel[3]])
+            .reduce((a, b) => a.map((aC, i) => aC + b[i]))
+            .map((component) => component / pixels.length);
+        if (premultipliedAlphaMean[3] > 0) {
+            const r = premultipliedAlphaMean[0] / premultipliedAlphaMean[3];
+            const g = premultipliedAlphaMean[1] / premultipliedAlphaMean[3];
+            const b = premultipliedAlphaMean[2] / premultipliedAlphaMean[3];
+            // Include nulls in alpha value
+            const a = ( flat.map((pixel) => pixel ? pixel[3] : 0)
+                            .reduce((a, b) => a + b) ) / flat.length;
+            return [r, g, b, a];
+        } else {
+            return [0, 0, 0, 0];
+        }
+    });
+
+    return means;
+}
+
+export function computeImageDct(context, processingBuffer, image) {
+    if (!processingBuffer.enabled) processingBuffer.enable();
+    context.gl.bindTexture(gl.TEXTURE_2D, image.texture);
+
+    const program = context.dctPrograms.get(processingBuffer.cellSize);
+    if (program) {
+        context.gl.useProgram(program);
+    } else {
+        const w = processingBuffer.cellSize[0];
+        const h = processingBuffer.cellSize[1];
+        console.warn(`building uncached shader for DCT block size (${w},${h})`);
+        const newProgram = compileShaders(context.gl,
+            fullscreenQuadVertexSource,
+            dctFragmentSource(w, h)
+        );
+        context.dctPrograms.set(processingBuffer.cellSize, newProgram);
+        context.gl.useProgram(newProgram);
+    }
+
+    context.drawFrame();
+
+    return processingBuffer.readCells((pixel) => pixel[0]/255);
 }
 
 export function refresh() {
