@@ -268,6 +268,195 @@ export function findCellMatches(levels) {
     }));
 }
 
+// https://stackoverflow.com/a/59739538
+const fullscreenQuadVertexSource = `
+out vec2 texCoord;
+void main() {
+    const vec2 vertices[3] = vec2[3](vec2(-1, -1), vec2(3,-1), vec2(-1, 3));
+    gl_Position = vec4(vertices[gl_VertexID], 0, 1);
+    texCoord = 0.5 * gl_Position.xy + vec2(0.5);
+}
+`;
+
+const fullscreenTextureFragmentSource = `
+    precision mediump float;
+    varying vec2 texCoord;
+    uniform sampler2D image;
+    void main() {
+        gl_FragColor = texture2D(image, texCoord);
+    }
+`;
+
+const sobelFragmentSource = `
+    precision mediump float;
+    varying vec2 texCoord;
+    uniform sampler2D image;
+    uniform vec2 pixelSize;
+    vec2 sobel(sampler2D texture, vec2 coord, vec2 pixel) {
+        const float sqrt3 = sqrt(3.0);
+        float tl = length(texture2D(texture, coord+pixel*vec2(-1,-1)).rgb)/sqrt3;
+        float tc = length(texture2D(texture, coord+pixel*vec2( 0,-1)).rgb)/sqrt3;
+        float tr = length(texture2D(texture, coord+pixel*vec2( 1,-1)).rgb)/sqrt3;
+        float cl = length(texture2D(texture, coord+pixel*vec2(-1, 0)).rgb)/sqrt3;
+        float cr = length(texture2D(texture, coord+pixel*vec2( 1, 0)).rgb)/sqrt3;
+        float bl = length(texture2D(texture, coord+pixel*vec2(-1, 1)).rgb)/sqrt3;
+        float bc = length(texture2D(texture, coord+pixel*vec2( 0, 1)).rgb)/sqrt3;
+        float br = length(texture2D(texture, coord+pixel*vec2( 1, 1)).rgb)/sqrt3;
+        float gx = -tl - 2.0*cl - bl + tr + 2.0*cr + br;
+        float gy = -tl - 2.0*tc - tr + bl + 2.0*bc + br;
+        return vec2(gx, gy);
+    }
+    void main() {
+        vec2 gradient = sobel(image, texCoord, pixelSize);
+        gl_FragColor = vec4(gradient, length(gradient)/sqrt(2.0), 1);
+    }
+`;
+
+const dctFragmentSource = (cellWidth, cellHeight) => `
+    precision mediump float;
+    varying vec2 texCoord;
+    uniform sampler2D image;
+    const vec2 cellPixelSize = vec2(${cellWidth}, ${cellHeight});
+    uniform vec2 pixelSize;
+    uniform vec2 cellSize;
+    void main() {
+        vec2 cell = floor(texCoord/cellSize);
+        vec2 cellBase = cell*cellSize;
+        vec2 freqUV = (texCoord-cellBase)/pixelSize;
+        float dct = 0.0;
+        for (float cellPixelX = 0.0; cellPixelX < cellPixelSize.x; cellPixelX += 1.0) {
+            for (float cellPixelY = 0.0; cellPixelY < cellPixelSize.y; cellPixelY += 1.0) {
+                vec2 cellPixel = vec2(cellPixelX, cellPixelY);
+                float pixelValue = length(texture2D(image,
+                    cellPixel * pixelSize + cellBase)) * 0.5;
+                vec2 dctXY = pixelValue * ( 1.0 + cos(
+                    (vec2(3.1415926538)/cellPixelSize)
+                    * (cellPixel+0.5)
+                    * freqUV));
+                dct += 0.25*(dctXY.x+dctXY.y);
+            }
+        }
+        gl_FragColor = vec4(dct/(cellPixelSize.x*cellPixelSize.y), 0, 0, 1);
+    }
+`;
+
+const isPositiveInteger = (val) => ( val>0 && Number.isInteger(val) );
+const isCellSize = (cellSize) => (
+    cellSize.length && cellSize.length >= 2 &&
+    isPositiveInteger(cellSize[0]) && isPositiveInteger(cellSize[1])
+);
+
+export function Context(cellSizes, canvas) {
+    this.gl = (canvas ?? document.createElement("canvas")).getContext("webgl");
+    if (!this.gl) throw new Error("could not initialize WebGL");
+
+    this.redrawProgram = compileShaders(this.gl,
+        fullscreenQuadVertexSource,
+        imageRedrawFragmentSource
+    );
+
+    this.sobelProgram = compileShaders(this.gl,
+        fullscreenQuadVertexSource,
+        sobelFragmentSource
+    );
+
+    this.dctPrograms = new Map(cellSizes?.map((cellSize) => {
+        if (isCellSize(cellSize)) {
+            return [cellSize, compileShaders(this.gl,
+                fullscreenQuadVertexSource,
+                dctFragmentSource(cellSize[0], cellSize[1])
+            )];
+        } else {
+            console.warn("unexpected cell size value: " + cellSize);
+            return undefined;
+        }
+    }));
+
+    this.addCellSize = function (cellSize) {
+        if (isCellSize(cellSize)) {
+            if (!this.dctPrograms.has(cellSize)) {
+                this.dctPrograms.set(cellSize, compileShaders(this.gl,
+                    fullscreenQuadVertexSource,
+                    dctFragmentSource(cellSize[0], cellSize[1])
+                ));
+            } else {
+                console.warn("redundant cell size add: " + cellSize);
+            }
+        } else {
+            console.warn("unexpected cell size value: " + cellSize);
+        }
+    };
+
+    this.clearDctPrograms = function (cellSizes) {
+        if (cellSizes) {
+            for (const cellSize of cellSizes) {
+                if (!this.dctPrograms.delete(cellSize)) {
+                    console.warn(`cell size ${cellSize} did not exist to be cleared from the DCT shader cache`);
+                }
+            }
+        } else {
+            this.dctPrograms.clear();
+        }
+    };
+}
+
+function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
+    const width = cellSize[0] * cellCount[0];
+    const height = cellSize[1] * cellCount[1];
+
+    this.texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height,
+        0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+    this.framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D, this.texture, 0);
+
+    if (!enabled) gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    this.enable = () => gl.BindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+    this.disable = () => gl.BindFramebuffer(gl.FRAMEBUFFER, null);
+
+    this.readCells = function (mapPixel) {
+        this.pixelBuffer ??= new Uint8Array(width*height*4);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBuffer);
+        return new Array(cellCount[1]).fill()
+            .map((_, gridRow) => new Array(cellCount[0]).fill()
+            .map((_, gridColumn) => new Array(cellSize[1]).fill()
+            .map((_, cellRow) => new Array(cellSize[0]).fill()
+            .map((_, cellColumn) => {
+                const pixelRowCellBase = cellCount[1]-gridRow-1;
+                const pixelRowCellOffset = cellSize[1]-cellRow-1;
+                const pixelRow = (pixelRowCellBase * cellSize[1])
+                                 + pixelRowCellOffset;
+                const pixelColumn = gridColumn * cellSize[0] + cellColumn;
+                const index = (pixelRow * width + pixelColumn) * 4;
+                const pixel = this.pixelBuffer.slice(index, index+4);
+                return mapPixel ? mapPixel(pixel) : pixel;
+        }))));
+    };
+}
+
+export function Image(context, img) {
+    const gl = context.gl;
+
+    this.texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
 export function refresh() {
     if (userImage) {
         if (cellSize < 4 || !Number.isInteger(cellSize)) {
@@ -574,7 +763,7 @@ function refreshAndUseDctShader(canvasWidth, canvasHeight) {
         cellSize/canvasWidth, cellSize/canvasHeight);
 }
 
-function compileShaders(vertexShaderSource, fragmentShaderSource) {
+function compileShaders(gl, vertexShaderSource, fragmentShaderSource) {
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertexShader, vertexShaderSource);
     gl.compileShader(vertexShader);
