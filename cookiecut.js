@@ -64,7 +64,7 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
             for (float cellPixelY = 0.0; cellPixelY < cellPixelSize.y; cellPixelY += 1.0) {
                 vec2 cellPixel = vec2(cellPixelX, cellPixelY);
                 vec2 pixelScreenCoord = cellPixel*pixelSize+cellBase;
-                vec4 pixel = texture(image, vec2(pixelScreenCoord.x, 1-pixelScreenCoord.y));
+                vec4 pixel = texture(image, vec2(pixelScreenCoord.x, 1.0-pixelScreenCoord.y));
                 float pixelValue = length(pixel.rgb)*(1.0/sqrt(3.0))*pixel.a;
                 vec2 dctXY = pixelValue * ( 1.0 + cos(
                     (vec2(3.1415926538)/cellPixelSize)
