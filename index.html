@@ -237,6 +237,16 @@
                 const halfSquare = 0.5*squareSize;
                 const radius = cellPreviewRadius * halfSquare;
 
+                document.querySelectorAll(".cell-size-width-display")
+                    .forEach((node) => { node.innerHTML = cellSize[0].toString(); });
+                document.querySelectorAll(".cell-size-height-display")
+                    .forEach((node) => { node.innerHTML = cellSize[1].toString(); });
+                document.querySelectorAll(".cell-count-width-display")
+                    .forEach((node) => { node.innerHTML = cellCount[0].toString(); });
+                document.querySelectorAll(".cell-count-height-display")
+                    .forEach((node) => { node.innerHTML = cellCount[1].toString(); });
+
+
                 ctx.fillStyle = gridColor;
                 ctx.clearRect(0, 0, width, height);
                 ctx.beginPath();
@@ -434,6 +444,10 @@
     <canvas id="glyph-canvas" style="display: none;"></canvas>
     <img id="user-image">
     <input type="range" id="subdivisions-input" step="1" disabled>
+    <span class="cell-size-width-display"></span>
+    <span class="cell-size-height-display"></span>
+    <span class="cell-count-width-display"></span>
+    <span class="cell-count-height-display"></span>
     <input type="file" id="user-image-upload" accept="image/*">
     <canvas id="preview-canvas"></canvas>
     <div id="levels-control">
