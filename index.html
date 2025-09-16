@@ -38,14 +38,17 @@
         let glyphThumbnailsDirty = true;
 
         function refreshPreview() {
+            const cellSize = getCellSize();
+            const cellCount = getCellCount();
+
             if (imageMeansDirty) {
                 if (image) {
                     imageMeans = cc.computeCellMeans(
                         processContext,
                         new cc.ProcessingBuffer(
                             processContext.gl,
-                            getCellSize(),
-                            getCellCount(),
+                            cellSize,
+                            cellCount,
                             true
                         ),
                         image
@@ -57,8 +60,12 @@
             }
 
             if (imageMeans) {
+                previewContext.canvas.width = cellSize[0] * cellCount[0];
+                previewContext.canvas.height = cellSize[1] * cellCount[1];
                 cc.drawValueDots(previewContext, imageMeans);
             } else {
+                previewContext.canvas.width = 100;
+                previewContext.canvas.height = 100;
                 previewContext.clearRect(0, 0, previewContext.canvas.width,
                                                previewContext.canvas.height);
             }
