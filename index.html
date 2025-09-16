@@ -25,51 +25,149 @@
     <script type="module">
         import * as cc from './cookiecut.js';
 
-        const image = document.getElementById("user-image");
-        const imageUpload = document.getElementById("user-image-upload");
-        const cellSize = document.getElementById("cell-size");
-        const canvas = document.getElementById("canvas");
-        const addLevel = document.getElementById("add-level");
-        const removeLevel = document.getElementById("remove-level");
-        const levels = document.getElementById("levels");
-        const output = document.getElementById("output");
+        // TODO show failure in UI
+        if (!cc.supported()) throw new Error("WebGL is not supported");
 
-        // TODO check for WebGL support and fail clearly to user
+        const processContext = new cc.Context(document.getElementById("webgl-canvas"));
+        const glyphContext = document.getElementById("glyph-canvas").getContext("2d");
+        const previewContext = document.getElementById("preview-canvas").getContext("2d");
+
+        let image;
+        let imageMeans;
+        let imageMeansDirty = true;
+        let glyphThumbnailsDirty = true;
+
+        function refreshPreview() {
+            if (imageMeansDirty) {
+                imageMeans = cc.computeCellMeans(
+                    processContext,
+                    new cc.ProcessingBuffer(
+                        processContext.gl,
+                        // cell size,
+                        // cell count,
+                        true
+                    ),
+                    image
+                ); // TODO masks from where that lives on the DOM
+                imageMeansDirty = false;
+            }
+            cc.drawValueDots(previewContext, imageMeans);
+
+            if (glyphThumbnailsDirty) {
+                const glyphs = getLevels().map((level) => level.glyphs).flat();
+                if (glyphs.length) cc.setGlyphImgs(
+                    glyphs.map((glyph) => [glyph.character,
+                                           glyph.node.querySelector("img")]),
+                    // cell size,
+                    'black', // TODO glyph color?
+                    glyphContext
+                );
+                glyphThumbnailsDirty = false;
+            }
+        }
+
+        function refreshOutput() {
+            const imageDct = cc.computeImageDct(
+                processContext,
+                new cc.ProcessingBuffer(
+                    processContext.gl,
+                    // cell size,
+                    // cell count,
+                    true
+                ),
+                image
+            );
+
+            const levels = getLevels();
+
+            const chars = [...new Set(levels.map((level) => level.glyphs).flat())];
+            const charDcts = cc.computeGlyphDcts(
+                processContext,
+                // cell size,
+                chars,
+                glyphContext
+            );
+            const dctLookup = new Map(chars.map((c, i) => [c, charDcts[i]]));
+
+            const thresholds = levels.map((level) => level.range.value);
+            const glyphLists = levels.map((level) =>
+                level.glyphs.map((glyph) => glyph.character));
+
+            const outputGrid = imageDct.map((row, rowIdx) => row.map((dct, colIdx) => {
+                const mean = imageMeans[rowIdx][colIdx];
+                const value = ((mean[0]+mean[1]+mean[2])/3)*mean[3];
+
+                let levelIdx = 0;
+                for (const threshold of thresholds) {
+                    if (value > threshold) {
+                        levelIdx += 1;
+                    } else {
+                        break;
+                    }
+                }
+                if (levelIdx >= levels.length) return ' ';
+
+                const glyphList = glyphLists[levelIdx].map((glyph) => glyph ?? ' ');
+
+                if (glyphList.length == 1) {
+                    return glyphList[0];
+                } else if (glyphList.length == 0) {
+                    return ' ';
+                }
+
+                const matchIdx = glyphList
+                    .map((glyph) => cc.dctDistance(dct, dctLookup.get(glyph)))
+                    .reduce((leastIdx, dist, curIdx, distances) =>
+                        (dist < distances[leastIdx]) ? curIdx : leastIdx, 0);
+
+                return glyphList[matchIdx];
+            }));
+
+            const output = document.getElementById("output");
+            output.rows = outputGrid.length;
+            output.cols = outputGrid[0].length;
+            output.value = outputGrid.map((row) => row.join('')).join('\n');
+        }
 
         function onImageUpload() {
+            const userImage = document.getElementById("user-image");
+            const imageUpload = document.getElementById("user-image-upload");
             const len = imageUpload.files.length;
             if (len == 1 && imageUpload.files[0].type.startsWith("image/")) {
+                // TODO handle if image is too big
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    image.src = e.target.result;
-                    image.onload = function() {
-                        cc.setImage(image);
-                        canvas.style.display = "inline";
-                        writeOutput(cc.findCellMatches(getLevels()
-                            .map((level) => [level.range.value,
-                                level.glyphs.map((glyph) => glyph.character)])));
-                        canvas.width = cc.imageSize[0];
-                        canvas.height = cc.imageSize[1];
-                        cc.drawMeans();
+                    userImage.src = e.target.result;
+                    userImage.onload = function() {
+                        image = new cc.Image(userImage);
+                        refreshPreview(true, false);
+                        //writeOutput(cc.findCellMatches(getLevels()
+                        //    .map((level) => [level.range.value,
+                        //        level.glyphs.map((glyph) => glyph.character)])));
                     };
                 };
                 // TODO handle read failure
                 reader.readAsDataURL(imageUpload.files[0]);
             } else {
-                image.src = '';
+                userImage.src = '';
                 cc.setImage(null);
-                canvas.style.display = "none";
                 if (len > 1) {
                     console.error("unexpected file upload count " + len);
                 }
             }
         }
 
-        function writeOutput(characters) {
-            output.rows = characters.length;
-            output.cols = characters[0].length;
-            output.value = characters.map((row) => row.join('')).join('\n');
+        function onHoverCellSize(e) {
+            // redraw a blank grid on the preview canvas showing the cell size
+            // (without recomputing anything)
         }
+
+        function onSetCellSize(e) {
+            imageMeansDirty = true;
+            glyphThumbnailsDirty = true;
+            refreshPreview();
+        }
+
 
         function getLevelNodes() {
             return Array.from(document.getElementById("levels").children)
@@ -84,7 +182,7 @@
                             .map((child) => ({
                                 node: child,
                                 character: child.characterValue
-                            })),
+                            }))
             }));
         }
 
@@ -195,19 +293,20 @@
             }
         }
 
-        cc.init(canvas);
-        cc.setCellSize(cellSize.value);
-        imageUpload.addEventListener("change", onImageUpload);
-        cellSize.addEventListener("change", (e) => {
-            cc.setCellSize(e.target.value);
-        });
-        cellSize.addEventListener("input", (e) => {
-            cc.setCellSize(e.target.value);
-            getLevels().map((level) => level.glyphs.map(
-                (glyph) => glyph.node.querySelector(".level-glyph-input")))
-                .flat()
-                .forEach((img) => img.dispatchEvent(new Event("input")));
-        });
+        document.getElementById("user-image-upload").addEventListener("change", onImageUpload);
+        document.getElementById("cell-size").addEventListener("input", onHoverCellSize);
+        document.getElementById("cell-size").addEventListener("change", onSetCellSize);
+        //document.getElementById("cell-size").addEventListener("change", (e) => {
+        //    cc.setCellSize(e.target.value);
+        //    cc.drawMeans();
+        //    getLevels().map((level) => level.glyphs.map(
+        //        (glyph) => glyph.node.querySelector(".level-glyph-input")))
+        //        .flat()
+        //        .forEach((img) => img.dispatchEvent(new Event("input")));
+        //});
+
+        const addLevel = document.getElementById("add-level");
+        const removeLevel = document.getElementById("remove-level");
         addLevel.addEventListener("click", onAddLevel);
         addLevel.addEventListener("click", onChangeLevels);
         removeLevel.addEventListener("click", onRemoveLevel);
@@ -217,10 +316,12 @@
         onImageUpload();
 
     </script>
+    <canvas id="webgl-canvas" style="display: none;"></canvas>
+    <canvas id="glyph-canvas" style="display: none;"></canvas>
     <img id="user-image">
     <input type="number" id="cell-size" min="4" step="1" value="8">
     <input type="file" id="user-image-upload" accept="image/*">
-    <canvas id="canvas"></canvas>
+    <canvas id="preview-canvas"></canvas>
     <div id="levels-control">
         <input type="button" id="remove-level" value="Remove level">
         <input type="button" id="add-level" value="Add level">
