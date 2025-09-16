@@ -99,7 +99,7 @@ export const dctDistance = (a, b) => {
 
     return a.map((row, rowIdx) => row.map((x, colIdx) =>
         (1-( (rowIdx+colIdx) / maxIdx )) * Math.abs(b[rowIdx][colIdx] - x) ));
-        .reduce((a, b) => a + b);
+        .reduce((x, y) => x + y);
 }
 
 export function Context(canvas, cellSizes) {
