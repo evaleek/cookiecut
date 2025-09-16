@@ -140,10 +140,8 @@
                     userImage.src = e.target.result;
                     userImage.onload = function() {
                         image = new cc.Image(userImage);
-                        refreshPreview(true, false);
-                        //writeOutput(cc.findCellMatches(getLevels()
-                        //    .map((level) => [level.range.value,
-                        //        level.glyphs.map((glyph) => glyph.character)])));
+                        imageMeansDirty = true;
+                        refreshPreview();
                     };
                 };
                 // TODO handle read failure
