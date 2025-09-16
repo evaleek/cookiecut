@@ -338,14 +338,32 @@
                     const newSize = Math.min(Math.round((1.0 - newFloor)*100), 100);
                     range.style.inlineSize = `${newSize}%`;
                     range.setAttribute("min", newFloor);
-                    range.dispatchEvent(new Event("input"));
+                    range.dispatchEvent(new Event("cascade"));
                 };
                 lastRange.addEventListener("input", range.inputListener);
+                lastRange.addEventListener("cascade", range.inputListener);
             } else {
                 range.style.inlineSize = "100%";
                 range.setAttribute("min", 0);
                 range.value = 1.0;
             }
+
+            const prevRange = ranges.at(-1);
+            range.addEventListener("input", (e) => {
+                // TODO inherit from style
+                const highlightColor = 'red';
+                if (imageMeans) cc.drawValueDots(
+                    previewContext,
+                    imageMeans,
+                    null, [
+                        prevRange?.valueAsNumber ?? 0,
+                        e.target.valueAsNumber
+                    ], highlightColor
+                );
+            });
+            range.addEventListener("change", () => {
+                if (imageMeans) cc.drawValueDots(previewContext, imageMeans);
+            });
 
             const addGlyphButton = level.querySelector(".level-glyph-control > .level-add-glyph");
             const removeGlyphButton = level.querySelector(".level-glyph-control > .level-remove-glyph");

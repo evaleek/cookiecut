@@ -449,7 +449,7 @@ export function setGlyphImgs(glyphs, cellSize, color, glyphDrawingContext) {
     }
 }
 
-export function drawValueDots(ctx, means, clearColor) {
+export function drawValueDots(ctx, means, clearColor, interval, highlightColor) {
     const xStep = ctx.canvas.width / means.length;
     const yStep = ctx.canvas.height / means[0].length;
     const cellCoord = (r, c) => [xStep*0.5 + xStep*c, yStep*0.5 + yStep*r];
@@ -462,8 +462,14 @@ export function drawValueDots(ctx, means, clearColor) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     }
 
+    if (highlightColor) ctx.strokeStyle = highlightColor;
+
     for (const [rowIdx, row] of means.entries()) {
         for (const [colIdx, pixel] of row.entries()) {
+            const value = ((pixel[0]+pixel[1]+pixel[2])/3)*pixel[3];
+            const [x, y] = cellCoord(rowIdx, colIdx);
+            const r = value * circleRadius;
+
             ctx.fillStyle = (pixel[4]==1.0)
                 ? `rgb(
                     ${Math.floor(pixel[0]*255)}
@@ -474,13 +480,20 @@ export function drawValueDots(ctx, means, clearColor) {
                     ${Math.floor(pixel[1]*255)}
                     ${Math.floor(pixel[2]*255)}
                     / ${Math.floor(pixel[3]*100)}%)`;
-            const value = ((pixel[0]+pixel[1]+pixel[2])/3)*pixel[3];
-            const [x, y] = cellCoord(rowIdx, colIdx);
-            const r = value * circleRadius;
 
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, 2*Math.PI);
-            ctx.fill();
+
+            if (interval && value > interval[0] && value <= interval[1]) {
+                const selectValue = Math.min(1, value*1.12);
+                const sr = selectValue * circleRadius;
+                ctx.beginPath();
+                ctx.roundRect(x-sr, y-sr, 2*sr, 2*sr, 0.9*sr);
+                ctx.fill();
+                if (highlightColor) ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, 2*Math.PI);
+                ctx.fill();
+            }
         }
     }
 }
