@@ -98,7 +98,7 @@ export const dctDistance = (a, b) => {
     // +1 because we want to count even the farthest entry a little bit
 
     return a.map((row, rowIdx) => row.map((x, colIdx) =>
-        (1-( (rowIdx+colIdx) / maxIdx )) * Math.abs(b[rowIdx][colIdx] - x) ));
+        (1-( (rowIdx+colIdx) / maxIdx )) * Math.abs(b[rowIdx][colIdx] - x) ))
         .reduce((x, y) => x + y);
 }
 
