@@ -349,21 +349,28 @@
             }
 
             const prevRange = ranges.at(-1);
-            range.addEventListener("input", (e) => {
-                // TODO inherit from style
-                const highlightColor = 'red';
+            // TODO inherit from style
+            const highlightColor = 'red';
+            const hoverHighlightColor = 'pink';
+
+            const highlightCells = (c) => ((e) => {
                 if (imageMeans) cc.drawValueDots(
                     previewContext,
                     imageMeans,
                     null, [
                         prevRange?.valueAsNumber ?? 0,
                         e.target.valueAsNumber
-                    ], highlightColor
+                    ], c
                 );
             });
-            range.addEventListener("change", () => {
-                if (imageMeans) cc.drawValueDots(previewContext, imageMeans);
-            });
+            const clearCells = () => {
+                if (imageMeans) cc.drawValueDots(previewContext, imageMeans)
+            };
+            range.addEventListener("input", highlightCells(highlightColor));
+            range.addEventListener("mousedown", highlightCells(highlightColor));
+            range.addEventListener("mouseenter", highlightCells(hoverHighlightColor));
+            range.addEventListener("mouseup", highlightCells(hoverHighlightColor));
+            range.addEventListener("mouseleave", clearCells);
 
             const addGlyphButton = level.querySelector(".level-glyph-control > .level-add-glyph");
             const removeGlyphButton = level.querySelector(".level-glyph-control > .level-remove-glyph");
