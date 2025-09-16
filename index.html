@@ -331,6 +331,7 @@
         document.getElementById("user-image-upload").addEventListener("change", onImageUpload);
         document.getElementById("cell-size").addEventListener("input", onHoverCellSize);
         document.getElementById("cell-size").addEventListener("change", onSetCellSize);
+        document.getElementById("process-output").addEventListener("click", refreshOutput);
 
         const addLevel = document.getElementById("add-level");
         const removeLevel = document.getElementById("remove-level");
@@ -369,6 +370,7 @@
             </div>
         </template>
     </div>
+    <input type="button" id="process-output" value="Process">
     <textarea id="output" readonly></textarea>
 </body>
 </html>
