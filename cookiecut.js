@@ -344,11 +344,9 @@ export function computeGlyphDcts(context, cellSize, characters, glyphDrawingCont
     ctx.font = `${Math.min(...cellSize)}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    // TODO switch depending on if value is positive or negative
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, size[0], size[1]);
 
-    // TODO switch depending on if value is positive or negative
     ctx.fillStyle = 'white';
     for (const [index, character] of characters.entries()) {
         const column = index % gridSize;
