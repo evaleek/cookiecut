@@ -6,7 +6,7 @@ out vec2 texCoord;
 void main() {
     const vec2 vertices[3] = vec2[3](vec2(-1, -1), vec2(3,-1), vec2(-1, 3));
     gl_Position = vec4(vertices[gl_VertexID], 0, 1);
-    texCoord = 0.5 * vec2(gl_Position.x, -gl_Position.y) + vec2(0.5);
+    texCoord = 0.5 * gl_Position.xy + vec2(0.5);
 }
 `;
 
@@ -55,14 +55,16 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
     uniform vec2 cellSize;
     out vec4 outColor;
     void main() {
-        vec2 cell = floor(texCoord/cellSize);
+        vec2 screenCoord = vec2(texCoord.x, 1.0-texCoord.y);
+        vec2 cell = floor(screenCoord/cellSize);
         vec2 cellBase = cell*cellSize;
-        vec2 freqUV = (texCoord-cellBase)/pixelSize;
+        vec2 freqUV = (screenCoord-cellBase)/pixelSize;
         float dct = 0.0;
         for (float cellPixelX = 0.0; cellPixelX < cellPixelSize.x; cellPixelX += 1.0) {
             for (float cellPixelY = 0.0; cellPixelY < cellPixelSize.y; cellPixelY += 1.0) {
                 vec2 cellPixel = vec2(cellPixelX, cellPixelY);
-                vec4 pixel = texture(image, cellPixel*pixelSize+cellBase);
+                vec2 pixelScreenCoord = cellPixel*pixelSize+cellBase;
+                vec4 pixel = texture(image, vec2(pixelScreenCoord.x, 1-pixelScreenCoord.y));
                 float pixelValue = length(pixel.rgb)*(1.0/sqrt(3.0))*pixel.a;
                 vec2 dctXY = pixelValue * ( 1.0 + cos(
                     (vec2(3.1415926538)/cellPixelSize)
@@ -108,6 +110,7 @@ export function Context(canvas, cellSizes) {
     this.gl = (canvas ?? document.createElement("canvas")).getContext("webgl2");
     if (!this.gl) throw new Error("could not initialize WebGL 2");
 
+    this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
     this.gl.clearColor(0, 0, 0, 0);
 
     this.redrawProgram = compileShaders(this.gl,
