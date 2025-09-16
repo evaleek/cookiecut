@@ -171,7 +171,7 @@ export function Context(canvas, cellSizes) {
         } else {
             const w = cellSize[0];
             const h = cellSize[1];
-            console.warn(`building uncached shader for DCT block size (${w},${h})`);
+            console.log(`building uncached shader for DCT block size (${w},${h})`);
             const newProgram = compileShaders(this.gl,
                 fullscreenQuadVertexSource,
                 dctFragmentSource(w, h)
