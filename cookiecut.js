@@ -97,13 +97,9 @@ export const dctDistance = (a, b) => {
     const maxIdx = maxRow + maxColumn + 1;
     // +1 because we want to count even the farthest entry a little bit
 
-    // Deweight entries the farther down and right they are
-    const deweight = (dct) => dct.map((row, rowIdx) => row.map((x, colIdx) =>
-        x * (1-( (rowIdx+colIdx) / maxIdx ))));
-
-    const b_flat = deweight(b).flat();
-    const zip = deweight(a).flat().map((x, idx) => [x, b_flat[idx]]);
-    return zip.reduce((acc, x) => acc + Math.abs(x[1]-x[0]), 0);
+    return a.map((row, rowIdx) => row.map((x, colIdx) =>
+        (1-( (rowIdx+colIdx) / maxIdx )) * Math.abs(b[rowIdx][colIdx] - x) ));
+        .reduce((a, b) => a + b);
 }
 
 export function Context(canvas, cellSizes) {
