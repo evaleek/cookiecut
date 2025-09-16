@@ -232,17 +232,17 @@
                 const img = glyph.querySelector("img");
                 glyph.querySelector(".level-glyph-input")
                     .addEventListener("input", (e) => {
-                        if (glyph.characterValue != null) {
-                            cc.removeGlyph(glyph.characterValue);
-                        }
-
                         if (e.target.value == ' ' || e.target.value == 0) {
                             glyph.characterValue = null;
                             img.src = '';
                         } else if (e.target.value.length == 1) {
                             glyph.characterValue = e.target.value;
-                            cc.addGlyph(e.target.value);
-                            img.src = cc.writeGlyph(e.target.value);
+                            img.src = cc.glyphDataUrl(
+                                e.target.value,
+                                // cell size,
+                                'black', // TODO glyph color?
+                                glyphContext
+                            );
                         } else {
                             console.error(`unexpected glyph input string \"${e.target.value}\"`);
                         }
