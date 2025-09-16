@@ -83,18 +83,20 @@
             }
         }
 
-        function refreshOutput() {
-            if (!image) {
-                console.warn("refreshOutput() call for no set image");
-                return;
-            }
+        function clearOutput() {
+            const output = document.getElementById("output");
+            output.rows = 8;
+            output.cols = 8;
+            output.value = '';
+        }
 
+        function refreshOutput() {
             const levels = getLevels();
             const chars = [...new Set(levels.map((level) =>
                 level.glyphs.map((glyph) => glyph.character)).flat())];
 
-            if (chars.length == 0) {
-                console.warn("refreshOutput() call for no set glyphs");
+            if ((!image) || chars.length == 0) {
+                clearOutput();
                 return;
             }
 
@@ -339,10 +341,10 @@
         addLevel.addEventListener("click", onChangeLevels);
         removeLevel.addEventListener("click", onRemoveLevel);
         removeLevel.addEventListener("click", onChangeLevels);
+
         onChangeLevels();
-
         onImageUpload();
-
+        clearOutput();
     </script>
     <canvas id="webgl-canvas" style="display: none;"></canvas>
     <canvas id="glyph-canvas" style="display: none;"></canvas>
