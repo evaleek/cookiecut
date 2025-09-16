@@ -208,8 +208,8 @@
                 reader.onload = (e) => {
                     userImage.src = e.target.result;
                     userImage.onload = () => setImage(userImage);
+                    userImage.onerror = () => setImage(null);
                 };
-                // TODO handle read failure
                 reader.readAsDataURL(imageUpload.files[0]);
             } else {
                 userImage.src = '';

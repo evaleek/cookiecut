@@ -481,7 +481,6 @@ export function drawValueDots(ctx, means, clearColor, interval, highlightColor) 
                     ${Math.floor(pixel[2]*255)}
                     / ${Math.floor(pixel[3]*100)}%)`;
 
-
             if (interval && value > interval[0] && value <= interval[1]) {
                 const selectValue = Math.min(1, value*1.12);
                 const sr = selectValue * circleRadius;
