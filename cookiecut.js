@@ -363,7 +363,7 @@ export function computeGlyphDcts(context, cellSize, characters, glyphDrawingCont
     }
 
     const gl = context.gl;
-    const result = new ProcessingBuffer(gl, cellSize, [gridSize, gridSize]);
+    const result = new ProcessingBuffer(gl, cellSize, [gridSize, gridSize], true);
     const glyphAtlas = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, glyphAtlas);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ctx.canvas);
