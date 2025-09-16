@@ -125,7 +125,7 @@ export function Context(canvas, cellSizes) {
 
     this.dctPrograms = new Map(cellSizes?.map((cellSize) => {
         if (isCellSize(cellSize)) {
-            return [cellSize, compileShaders(this.gl,
+            return [cellSize.join(), compileShaders(this.gl,
                 fullscreenQuadVertexSource,
                 dctFragmentSource(cellSize[0], cellSize[1])
             )];
@@ -137,8 +137,9 @@ export function Context(canvas, cellSizes) {
 
     this.addCellSize = function (cellSize) {
         if (isCellSize(cellSize)) {
-            if (!this.dctPrograms.has(cellSize)) {
-                this.dctPrograms.set(cellSize, compileShaders(this.gl,
+            const key = cellSize.join();
+            if (!this.dctPrograms.has(key)) {
+                this.dctPrograms.set(key, compileShaders(this.gl,
                     fullscreenQuadVertexSource,
                     dctFragmentSource(cellSize[0], cellSize[1])
                 ));
@@ -153,7 +154,7 @@ export function Context(canvas, cellSizes) {
     this.clearDctPrograms = function (cellSizes) {
         if (cellSizes) {
             for (const cellSize of cellSizes) {
-                if (!this.dctPrograms.delete(cellSize)) {
+                if (!this.dctPrograms.delete(cellSize.join())) {
                     console.warn(`cell size ${cellSize} did not exist to be cleared from the DCT shader cache`);
                 }
             }
@@ -163,7 +164,8 @@ export function Context(canvas, cellSizes) {
     };
 
     this.useDctProgram = function (cellSize) {
-        const program = this.dctPrograms.get(cellSize);
+        const key = cellSize.join();
+        const program = this.dctPrograms.get(key);
         if (program) {
             this.gl.useProgram(program);
         } else {
@@ -174,7 +176,7 @@ export function Context(canvas, cellSizes) {
                 fullscreenQuadVertexSource,
                 dctFragmentSource(w, h)
             );
-            this.dctPrograms.set(cellSize, newProgram);
+            this.dctPrograms.set(key, newProgram);
             this.gl.useProgram(newProgram);
         }
     };
