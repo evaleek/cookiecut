@@ -443,7 +443,7 @@ export function setGlyphImgs(glyphs, cellSize, color, glyphDrawingContext) {
     }
 }
 
-export function drawValueDots(ctx, means, clearColor, interval, highlightColor) {
+export function drawValueDots(ctx, means, pixelValue, clearColor, interval, highlightColor) {
     const xStep = ctx.canvas.width / means.length;
     const yStep = ctx.canvas.height / means[0].length;
     const cellCoord = (r, c) => [xStep*0.5 + xStep*c, yStep*0.5 + yStep*r];
@@ -460,7 +460,8 @@ export function drawValueDots(ctx, means, clearColor, interval, highlightColor) 
 
     for (const [rowIdx, row] of means.entries()) {
         for (const [colIdx, pixel] of row.entries()) {
-            const value = ((pixel[0]+pixel[1]+pixel[2])/3)*pixel[3];
+            const value = pixelValue(pixel);
+            //const value = ((pixel[0]+pixel[1]+pixel[2])/3)*pixel[3];
             const [x, y] = cellCoord(rowIdx, colIdx);
             const r = value * circleRadius;
 

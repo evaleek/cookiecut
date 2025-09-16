@@ -65,7 +65,7 @@
                 // but adjust *aspect ratio* to match new image
                 previewContext.canvas.width = cellSize[0] * imageMeans[0].length;
                 previewContext.canvas.height = cellSize[1] * imageMeans.length;
-                cc.drawValueDots(previewContext, imageMeans);
+                cc.drawValueDots(previewContext, imageMeans, getPixelValuer());
             } else {
                 previewContext.canvas.width = 100;
                 previewContext.canvas.height = 100;
@@ -128,9 +128,11 @@
             const glyphLists = levels.map((level) =>
                 level.glyphs.map((glyph) => glyph.character));
 
+            const valuer = getPixelValuer();
+
             const outputGrid = imageDct.map((row, rowIdx) => row.map((dct, colIdx) => {
                 const mean = imageMeans[rowIdx][colIdx];
-                const value = ((mean[0]+mean[1]+mean[2])/3)*mean[3];
+                const value = valuer(mean);
 
                 let levelIdx = 0;
                 for (const threshold of thresholds) {
@@ -299,6 +301,20 @@
             ];
         }
 
+        function getPixelValuer() {
+            const check = document.querySelector('input[name="value-choice"]:checked').value;
+            switch (check) {
+                case "lights":
+                    return (rgba) => ((rgba[0]+rgba[1]+rgba[2])/3) * rgba[3];
+                case "darks":
+                    return (rgba) => (1-((rgba[0]+rgba[1]+rgba[2])/3)) * rgba[3];
+                case null:
+                    throw new Error("no value type checked at pixel valuation");
+                default:
+                    throw new Error(`unrecognized pixel valuation \"${check}\"`);
+            }
+        }
+
         function getLevelNodes() {
             return Array.from(document.getElementById("levels").children)
                 .filter((element) => element.classList.contains("level"));
@@ -357,6 +373,7 @@
                 if (imageMeans) cc.drawValueDots(
                     previewContext,
                     imageMeans,
+                    getPixelValuer(),
                     null, [
                         prevRange?.valueAsNumber ?? 0,
                         e.target.valueAsNumber
@@ -364,7 +381,7 @@
                 );
             });
             const clearCells = () => {
-                if (imageMeans) cc.drawValueDots(previewContext, imageMeans)
+                if (imageMeans) cc.drawValueDots(previewContext, imageMeans, getPixelValuer())
             };
             range.addEventListener("input", highlightCells(highlightColor));
             range.addEventListener("mousedown", highlightCells(highlightColor));
@@ -448,6 +465,11 @@
             }
         }
 
+        function onChangeValueChoice() {
+            imageMeansDirty = true;
+            refreshPreview();
+        }
+
         document.getElementById("user-image-upload").addEventListener("change", onImageUpload);
         document.getElementById("subdivisions-input").addEventListener("input", onHoverCellSize);
         document.getElementById("subdivisions-input").addEventListener("change", onSetCellSize);
@@ -459,6 +481,9 @@
         addLevel.addEventListener("click", onChangeLevels);
         removeLevel.addEventListener("click", onRemoveLevel);
         removeLevel.addEventListener("click", onChangeLevels);
+        document.querySelectorAll('input[name="value-choice"]')
+            .forEach((node) =>
+                node.addEventListener("change", onChangeValueChoice));
 
         onChangeLevels();
         clearOutput();
@@ -467,33 +492,39 @@
     <canvas id="webgl-canvas" style="display: none;"></canvas>
     <canvas id="glyph-canvas" style="display: none;"></canvas>
     <img id="user-image">
-    <input type="range" id="subdivisions-input" step="1" disabled>
+    <input type="range" id="subdivisions-input" step="1" disabled />
     <span class="cell-size-width-display"></span>
     <span class="cell-size-height-display"></span>
     <span class="cell-count-width-display"></span>
     <span class="cell-count-height-display"></span>
-    <input type="file" id="user-image-upload" accept="image/*">
+    <input type="file" id="user-image-upload" accept="image/*" />
     <canvas id="preview-canvas"></canvas>
+    <div>
+        <input type="radio" id="value-lights-choice" name="value-choice" value="lights" checked />
+        <label for="value-lights-choice">Value lights</label>
+        <input type="radio" id="value-darks-choice" name="value-choice" value="darks" />
+        <label for="value-darks-choice">Value darks</label>
+    </div>
     <div id="levels-control">
-        <input type="button" id="remove-level" value="Remove level">
-        <input type="button" id="add-level" value="Add level">
+        <input type="button" id="remove-level" value="Remove level" />
+        <input type="button" id="add-level" value="Add level" />
     </div>
     <div id="levels">
         <template id="level-template">
-            <input type="range" class="level-range" step="any" max="1" style="inline-size:100%;">
+            <input type="range" class="level-range" step="any" max="1" style="inline-size:100%;" />
             <div class="level-glyph-control">
-                <input type="button" class="level-remove-glyph" value="Remove glyph">
-                <input type="button" class="level-add-glyph" value="Add glyph">
+                <input type="button" class="level-remove-glyph" value="Remove glyph" />
+                <input type="button" class="level-add-glyph" value="Add glyph" />
             </div>
             <div class="level-glyph-list">
                 <template id="level-glyph-template">
                     <img>
-                    <input type="text" class="level-glyph-input" maxlength="1" size="1">
+                    <input type="text" class="level-glyph-input" maxlength="1" size="1" />
                 </template>
             </div>
         </template>
     </div>
-    <input type="button" id="process-output" value="Process">
+    <input type="button" id="process-output" value="Process" />
     <textarea id="output" readonly></textarea>
 </body>
 </html>
