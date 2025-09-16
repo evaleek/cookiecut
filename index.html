@@ -362,7 +362,7 @@
                 const img = glyph.querySelector("img");
                 glyph.querySelector(".level-glyph-input")
                     .addEventListener("input", (e) => {
-                        if (e.target.value == ' ' || e.target.value == 0) {
+                        if (e.target.value == ' ' || e.target.value == '') {
                             glyph.characterValue = null;
                             img.src = '';
                         } else if (e.target.value.length == 1) {
