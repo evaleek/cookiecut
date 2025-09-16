@@ -1,4 +1,4 @@
-export const supported = () => typeof WebGLRenderingContext !== 'undefined';
+export const supported = () => typeof WebGL2RenderingContext !== 'undefined';
 
 // https://stackoverflow.com/a/59739538
 const fullscreenQuadVertexSource = `
@@ -11,46 +11,49 @@ void main() {
 `;
 
 const fullscreenTextureFragmentSource = `
-    precision mediump float;
-    varying vec2 texCoord;
+    precision highp float;
+    in vec2 texCoord;
     uniform sampler2D image;
+    out vec4 outColor;
     void main() {
-        gl_FragColor = texture2D(image, texCoord);
+        outColor = texture(image, texCoord);
     }
 `;
 
 const sobelFragmentSource = `
-    precision mediump float;
-    varying vec2 texCoord;
+    precision highp float;
+    in vec2 texCoord;
     uniform sampler2D image;
     uniform vec2 pixelSize;
-    vec2 sobel(sampler2D texture, vec2 coord, vec2 pixel) {
+    out vec4 outColor;
+    vec2 sobel(sampler2D tex, vec2 coord, vec2 pixel) {
         const float sqrt3 = sqrt(3.0);
-        float tl = length(texture2D(texture, coord+pixel*vec2(-1,-1)).rgb)/sqrt3;
-        float tc = length(texture2D(texture, coord+pixel*vec2( 0,-1)).rgb)/sqrt3;
-        float tr = length(texture2D(texture, coord+pixel*vec2( 1,-1)).rgb)/sqrt3;
-        float cl = length(texture2D(texture, coord+pixel*vec2(-1, 0)).rgb)/sqrt3;
-        float cr = length(texture2D(texture, coord+pixel*vec2( 1, 0)).rgb)/sqrt3;
-        float bl = length(texture2D(texture, coord+pixel*vec2(-1, 1)).rgb)/sqrt3;
-        float bc = length(texture2D(texture, coord+pixel*vec2( 0, 1)).rgb)/sqrt3;
-        float br = length(texture2D(texture, coord+pixel*vec2( 1, 1)).rgb)/sqrt3;
+        float tl = length(texture(tex, coord+pixel*vec2(-1,-1)).rgb)/sqrt3;
+        float tc = length(texture(tex, coord+pixel*vec2( 0,-1)).rgb)/sqrt3;
+        float tr = length(texture(tex, coord+pixel*vec2( 1,-1)).rgb)/sqrt3;
+        float cl = length(texture(tex, coord+pixel*vec2(-1, 0)).rgb)/sqrt3;
+        float cr = length(texture(tex, coord+pixel*vec2( 1, 0)).rgb)/sqrt3;
+        float bl = length(texture(tex, coord+pixel*vec2(-1, 1)).rgb)/sqrt3;
+        float bc = length(texture(tex, coord+pixel*vec2( 0, 1)).rgb)/sqrt3;
+        float br = length(texture(tex, coord+pixel*vec2( 1, 1)).rgb)/sqrt3;
         float gx = -tl - 2.0*cl - bl + tr + 2.0*cr + br;
         float gy = -tl - 2.0*tc - tr + bl + 2.0*bc + br;
         return vec2(gx, gy);
     }
     void main() {
         vec2 gradient = sobel(image, texCoord, pixelSize);
-        gl_FragColor = vec4(gradient, length(gradient)/sqrt(2.0), 1);
+        outColor = vec4(gradient, length(gradient)/sqrt(2.0), 1);
     }
 `;
 
 const dctFragmentSource = (cellWidth, cellHeight) => `
-    precision mediump float;
-    varying vec2 texCoord;
+    precision highp float;
+    in vec2 texCoord;
     uniform sampler2D image;
     const vec2 cellPixelSize = vec2(${cellWidth}, ${cellHeight});
     uniform vec2 pixelSize;
     uniform vec2 cellSize;
+    out vec4 outColor;
     void main() {
         vec2 cell = floor(texCoord/cellSize);
         vec2 cellBase = cell*cellSize;
@@ -59,7 +62,7 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
         for (float cellPixelX = 0.0; cellPixelX < cellPixelSize.x; cellPixelX += 1.0) {
             for (float cellPixelY = 0.0; cellPixelY < cellPixelSize.y; cellPixelY += 1.0) {
                 vec2 cellPixel = vec2(cellPixelX, cellPixelY);
-                vec4 pixel = texture2D(image, cellPixel*pixelSize+cellBase);
+                vec4 pixel = texture(image, cellPixel*pixelSize+cellBase);
                 float pixelValue = length(pixel.rgb)*(1.0/sqrt(3.0))*pixel.a;
                 vec2 dctXY = pixelValue * ( 1.0 + cos(
                     (vec2(3.1415926538)/cellPixelSize)
@@ -68,7 +71,7 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
                 dct += 0.25*(dctXY.x+dctXY.y);
             }
         }
-        gl_FragColor = vec4(dct/(cellPixelSize.x*cellPixelSize.y), 0, 0, 1);
+        outColor = vec4(dct/(cellPixelSize.x*cellPixelSize.y), 0, 0, 1);
     }
 `;
 
@@ -102,14 +105,14 @@ export const dctDistance = (a, b) => {
 }
 
 export function Context(canvas, cellSizes) {
-    this.gl = (canvas ?? document.createElement("canvas")).getContext("webgl");
-    if (!this.gl) throw new Error("could not initialize WebGL");
+    this.gl = (canvas ?? document.createElement("canvas")).getContext("webgl2");
+    if (!this.gl) throw new Error("could not initialize WebGL 2");
 
     this.gl.clearColor(0, 0, 0, 0);
 
     this.redrawProgram = compileShaders(this.gl,
         fullscreenQuadVertexSource,
-        imageRedrawFragmentSource
+        fullscreenTextureFragmentSource
     );
 
     this.sobelProgram = compileShaders(this.gl,
@@ -285,7 +288,7 @@ export function computeCellMeans(context, processingBuffer, image, masks, maskEp
 
     const pixels = processingBuffer.readCells(
         (pixel) => maskPixel(Array.from(pixel, (x) => x/255)));
-    const means = pixels.map((row) => row.map(cell) => {
+    const means = pixels.map((row) => row.map((cell) => {
         const flat = block.flat(1);
         const flatPixels = flat.filter((p) => p); // only-non-null
         if (flatPixels.length == 0) return [0, 0, 0, 0];
@@ -306,7 +309,7 @@ export function computeCellMeans(context, processingBuffer, image, masks, maskEp
         } else {
             return [0, 0, 0, 0];
         }
-    });
+    }));
 
     return means;
 }
@@ -477,8 +480,9 @@ export function drawValueDots(ctx, means, clearColor) {
 }
 
 function compileShaders(gl, vertexShaderSource, fragmentShaderSource) {
+    const versionPrepend = "#version 300 es\n";
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertexShader, vertexShaderSource);
+    gl.shaderSource(vertexShader, versionPrepend + vertexShaderSource);
     gl.compileShader(vertexShader);
     if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
         console.log(gl.getShaderInfoLog(vertexShader));
@@ -487,7 +491,7 @@ function compileShaders(gl, vertexShaderSource, fragmentShaderSource) {
     }
 
     const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.shaderSource(fragmentShader, versionPrepend + fragmentShaderSource);
     gl.compileShader(fragmentShader);
     if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
         console.log(gl.getShaderInfoLog(fragmentShader));
