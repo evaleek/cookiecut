@@ -178,11 +178,11 @@ export function Context(canvas, cellSizes) {
 
     this.drawFrame = () => {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-        this.gl.drawArrays(gl.TRIANGLES, 0, 3);
+        this.gl.drawArrays(this.gl.TRIANGLES, 0, 3);
     };
 
-    this.getImageSizeLimit = Math.min(this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE),
-                                      this.gl.getParameter(this.gl.MAX_VIEWPORT_DIMS));
+    this.imageSizeLimit = Math.min(this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE),
+                                   this.gl.getParameter(this.gl.MAX_VIEWPORT_DIMS));
 }
 
 export function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
@@ -251,7 +251,7 @@ export function Image(context, img) {
 
     this.size = [img.naturalWidth, img.naturalHeight];
 
-    const sizeLimit = getImageSizeLimit(gl);
+    const sizeLimit = context.imageSizeLimit;
     this.textureSizeClipped = this.size.map[0] > sizeLimit ||
                               this.size.map[1] > sizeLimit;
     if (this.textureSizeClipped) {
@@ -274,7 +274,7 @@ export function Image(context, img) {
 
 export function computeCellMeans(context, processingBuffer, image, masks, maskEpsilon) {
     if (!processingBuffer.enabled) processingBuffer.enable();
-    context.gl.bindTexture(gl.TEXTURE_2D, image.texture);
+    context.gl.bindTexture(context.gl.TEXTURE_2D, image.texture);
     context.gl.useProgram(context.redrawProgram);
     context.drawFrame();
 
@@ -289,7 +289,7 @@ export function computeCellMeans(context, processingBuffer, image, masks, maskEp
     const pixels = processingBuffer.readCells(
         (pixel) => maskPixel(Array.from(pixel, (x) => x/255)));
     const means = pixels.map((row) => row.map((cell) => {
-        const flat = block.flat(1);
+        const flat = cell.flat(1);
         const flatPixels = flat.filter((p) => p); // only-non-null
         if (flatPixels.length == 0) return [0, 0, 0, 0];
         const premultipliedAlphaMean = flatPixels
@@ -301,6 +301,7 @@ export function computeCellMeans(context, processingBuffer, image, masks, maskEp
             .map((component) => component / pixels.length);
         if (premultipliedAlphaMean[3] > 0) {
             const r = premultipliedAlphaMean[0] / premultipliedAlphaMean[3];
+            const g = premultipliedAlphaMean[1] / premultipliedAlphaMean[3];
             const b = premultipliedAlphaMean[2] / premultipliedAlphaMean[3];
             // Include nulls in alpha value
             const a = ( flat.map((pixel) => pixel ? pixel[3] : 0)
@@ -456,8 +457,8 @@ export function drawValueDots(ctx, means, clearColor) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     }
 
-    for (const [r, row] of means.entries()) {
-        for (const [c, pixel] of row.entries()) {
+    for (const [rowIdx, row] of means.entries()) {
+        for (const [colIdx, pixel] of row.entries()) {
             ctx.fillStyle = (pixel[4]==1.0)
                 ? ctx.strokeStyle = `rgb(
                     ${Math.floor(pixel[0]*255)}
@@ -469,7 +470,7 @@ export function drawValueDots(ctx, means, clearColor) {
                     ${Math.floor(pixel[2]*255)}
                     / ${Math.floor(pixel[3]*100)}%)`;
             const value = ((pixel[0]+pixel[1]+pixel[2])/3)*pixel[3];
-            const [x, y] = cellCoord(r, c);
+            const [x, y] = cellCoord(rowIdx, colIdx);
             const r = value * circleRadius;
 
             ctx.beginPath();

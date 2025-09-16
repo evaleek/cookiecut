@@ -39,26 +39,36 @@
 
         function refreshPreview() {
             if (imageMeansDirty) {
-                imageMeans = cc.computeCellMeans(
-                    processContext,
-                    new cc.ProcessingBuffer(
-                        processContext.gl,
-                        // cell size,
-                        // cell count,
-                        true
-                    ),
-                    image
-                ); // TODO masks from where that lives on the DOM
+                if (image) {
+                    imageMeans = cc.computeCellMeans(
+                        processContext,
+                        new cc.ProcessingBuffer(
+                            processContext.gl,
+                            getCellSize(),
+                            getCellCount(),
+                            true
+                        ),
+                        image
+                    ); // TODO masks from where that lives on the DOM
+                } else {
+                    imageMeans = null;
+                }
                 imageMeansDirty = false;
             }
-            cc.drawValueDots(previewContext, imageMeans);
+
+            if (imageMeans) {
+                cc.drawValueDots(previewContext, imageMeans);
+            } else {
+                previewContext.clearRect(0, 0, previewContext.canvas.width,
+                                               previewContext.canvas.height);
+            }
 
             if (glyphThumbnailsDirty) {
                 const glyphs = getLevels().map((level) => level.glyphs).flat();
                 if (glyphs.length) cc.setGlyphImgs(
                     glyphs.map((glyph) => [glyph.character,
                                            glyph.node.querySelector("img")]),
-                    // cell size,
+                    getCellSize(),
                     'black', // TODO glyph color?
                     glyphContext
                 );
@@ -71,8 +81,8 @@
                 processContext,
                 new cc.ProcessingBuffer(
                     processContext.gl,
-                    // cell size,
-                    // cell count,
+                    getCellSize(),
+                    getCellCount(),
                     true
                 ),
                 image
@@ -83,7 +93,7 @@
             const chars = [...new Set(levels.map((level) => level.glyphs).flat())];
             const charDcts = cc.computeGlyphDcts(
                 processContext,
-                // cell size,
+                getCellSize(),
                 chars,
                 glyphContext
             );
@@ -139,7 +149,7 @@
                 reader.onload = (e) => {
                     userImage.src = e.target.result;
                     userImage.onload = function() {
-                        image = new cc.Image(userImage);
+                        image = new cc.Image(processContext, userImage);
                         imageMeansDirty = true;
                         refreshPreview();
                     };
@@ -148,7 +158,9 @@
                 reader.readAsDataURL(imageUpload.files[0]);
             } else {
                 userImage.src = '';
-                cc.setImage(null);
+                image = null;
+                imageMeansDirty = true;
+                refreshPreview();
                 if (len > 1) {
                     console.error("unexpected file upload count " + len);
                 }
@@ -166,6 +178,13 @@
             refreshPreview();
         }
 
+        function getCellSize() {
+            return [8, 8];
+        }
+
+        function getCellCount() {
+            return [64, 64];
+        }
 
         function getLevelNodes() {
             return Array.from(document.getElementById("levels").children)
@@ -294,14 +313,6 @@
         document.getElementById("user-image-upload").addEventListener("change", onImageUpload);
         document.getElementById("cell-size").addEventListener("input", onHoverCellSize);
         document.getElementById("cell-size").addEventListener("change", onSetCellSize);
-        //document.getElementById("cell-size").addEventListener("change", (e) => {
-        //    cc.setCellSize(e.target.value);
-        //    cc.drawMeans();
-        //    getLevels().map((level) => level.glyphs.map(
-        //        (glyph) => glyph.node.querySelector(".level-glyph-input")))
-        //        .flat()
-        //        .forEach((img) => img.dispatchEvent(new Event("input")));
-        //});
 
         const addLevel = document.getElementById("add-level");
         const removeLevel = document.getElementById("remove-level");
@@ -317,6 +328,7 @@
     <canvas id="webgl-canvas" style="display: none;"></canvas>
     <canvas id="glyph-canvas" style="display: none;"></canvas>
     <img id="user-image">
+    <input type="range" id="subdivisions-input" step="1" disabled>
     <input type="number" id="cell-size" min="4" step="1" value="8">
     <input type="file" id="user-image-upload" accept="image/*">
     <canvas id="preview-canvas"></canvas>
