@@ -84,6 +84,20 @@
         }
 
         function refreshOutput() {
+            if (!image) {
+                console.warn("refreshOutput() call for no set image");
+                return;
+            }
+
+            const levels = getLevels();
+            const chars = [...new Set(levels.map((level) =>
+                level.glyphs.map((glyph) => glyph.character)).flat())];
+
+            if (chars.length == 0) {
+                console.warn("refreshOutput() call for no set glyphs");
+                return;
+            }
+
             const imageDct = cc.computeImageDct(
                 processContext,
                 new cc.ProcessingBuffer(
@@ -95,9 +109,6 @@
                 image
             );
 
-            const levels = getLevels();
-
-            const chars = [...new Set(levels.map((level) => level.glyphs).flat())];
             const charDcts = cc.computeGlyphDcts(
                 processContext,
                 getCellSize(),
