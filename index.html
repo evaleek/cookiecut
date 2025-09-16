@@ -159,6 +159,16 @@
             output.value = outputGrid.map((row) => row.join('')).join('\n');
         }
 
+        function setImage(img) {
+            if (img) {
+                image = new cc.Image(processContext, img);
+            } else {
+                image = null;
+            }
+            imageMeansDirty = true;
+            refreshPreview();
+        }
+
         function onImageUpload() {
             const userImage = document.getElementById("user-image");
             const imageUpload = document.getElementById("user-image-upload");
@@ -168,19 +178,13 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     userImage.src = e.target.result;
-                    userImage.onload = function() {
-                        image = new cc.Image(processContext, userImage);
-                        imageMeansDirty = true;
-                        refreshPreview();
-                    };
+                    userImage.onload = () => setImage(userImage);
                 };
                 // TODO handle read failure
                 reader.readAsDataURL(imageUpload.files[0]);
             } else {
                 userImage.src = '';
-                image = null;
-                imageMeansDirty = true;
-                refreshPreview();
+                setImage(null);
                 if (len > 1) {
                     console.error("unexpected file upload count " + len);
                 }
@@ -343,8 +347,8 @@
         removeLevel.addEventListener("click", onChangeLevels);
 
         onChangeLevels();
-        onImageUpload();
         clearOutput();
+        onImageUpload();
     </script>
     <canvas id="webgl-canvas" style="display: none;"></canvas>
     <canvas id="glyph-canvas" style="display: none;"></canvas>
