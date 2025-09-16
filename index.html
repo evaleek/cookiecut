@@ -263,7 +263,7 @@
                             glyph.characterValue = e.target.value;
                             img.src = cc.glyphDataUrl(
                                 e.target.value,
-                                // cell size,
+                                getCellSize(),
                                 'black', // TODO glyph color?
                                 glyphContext
                             );
