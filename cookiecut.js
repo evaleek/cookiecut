@@ -465,11 +465,11 @@ export function drawValueDots(ctx, means, clearColor) {
     for (const [rowIdx, row] of means.entries()) {
         for (const [colIdx, pixel] of row.entries()) {
             ctx.fillStyle = (pixel[4]==1.0)
-                ? ctx.strokeStyle = `rgb(
+                ? `rgb(
                     ${Math.floor(pixel[0]*255)}
                     ${Math.floor(pixel[1]*255)}
                     ${Math.floor(pixel[2]*255)})`
-                : ctx.strokeStyle = `rgb(
+                : `rgb(
                     ${Math.floor(pixel[0]*255)}
                     ${Math.floor(pixel[1]*255)}
                     ${Math.floor(pixel[2]*255)}

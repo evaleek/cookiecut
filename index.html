@@ -61,6 +61,8 @@
 
             if (imageMeans) {
                 cellSize ??= getCellSize();
+                // TODO keep preview canvas at a constant resolution,
+                // but adjust *aspect ratio* to match new image
                 previewContext.canvas.width = cellSize[0] * imageMeans[0].length;
                 previewContext.canvas.height = cellSize[1] * imageMeans.length;
                 cc.drawValueDots(previewContext, imageMeans);
@@ -219,8 +221,45 @@
         }
 
         function onHoverCellSize(e) {
-            // redraw a blank grid on the preview canvas showing the cell size
-            // (without recomputing anything)
+            if (image) {
+                // TODO inherit from style
+                const gridColor = 'darkgray';
+                const cellPreviewPortion = 0.8;
+                const cellPreviewRadius = 0.68;
+                const ctx = previewContext;
+                const width = ctx.canvas.width;
+                const height = ctx.canvas.height;
+                const cellSize = computeCellSize(e.target.valueAsNumber);
+                const cellCount = getCellCount(cellSize, image);
+                const xStride = width/cellCount[0];
+                const yStride = height/cellCount[1];
+                const squareSize = Math.min(xStride, yStride) * cellPreviewPortion;
+                const halfSquare = 0.5*squareSize;
+                const radius = cellPreviewRadius * halfSquare;
+
+                ctx.fillStyle = gridColor;
+                ctx.clearRect(0, 0, width, height);
+                ctx.beginPath();
+
+                let col;
+                for (let row = 0; row < cellCount[1]; row++) {
+                    for (col = 0; col < cellCount[0]; col++) {
+                        const x = (col+0.5)*xStride;
+                        const y = (row+0.5)*yStride;
+                        ctx.roundRect(
+                            x-halfSquare,
+                            y-halfSquare,
+                            squareSize,
+                            squareSize,
+                            radius
+                        );
+                    }
+                }
+
+                ctx.fill();
+            } else {
+                console.error("cell size input hover without a set image");
+            }
         }
 
         function onSetCellSize(e) {
@@ -234,9 +273,13 @@
             if (subdivInput.disabled) {
                 console.error("request for unenabled cell size");
             }
+            return computeCellSize(subdivInput.valueAsNumber);
+        }
+
+        function computeCellSize(inputValue) {
             return [
-                Math.round(subdivInput.valueAsNumber),
-                Math.round(subdivInput.valueAsNumber)
+                Math.round(inputValue),
+                Math.round(inputValue)
             ];
         }
 
@@ -372,7 +415,7 @@
         }
 
         document.getElementById("user-image-upload").addEventListener("change", onImageUpload);
-        document.getElementById("cell-size").addEventListener("input", onHoverCellSize);
+        document.getElementById("subdivisions-input").addEventListener("input", onHoverCellSize);
         document.getElementById("subdivisions-input").addEventListener("change", onSetCellSize);
         document.getElementById("process-output").addEventListener("click", refreshOutput);
 
@@ -391,7 +434,6 @@
     <canvas id="glyph-canvas" style="display: none;"></canvas>
     <img id="user-image">
     <input type="range" id="subdivisions-input" step="1" disabled>
-    <input type="number" id="cell-size" min="4" step="1" value="8">
     <input type="file" id="user-image-upload" accept="image/*">
     <canvas id="preview-canvas"></canvas>
     <div id="levels-control">
