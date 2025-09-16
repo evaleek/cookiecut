@@ -6,7 +6,7 @@ out vec2 texCoord;
 void main() {
     const vec2 vertices[3] = vec2[3](vec2(-1, -1), vec2(3,-1), vec2(-1, 3));
     gl_Position = vec4(vertices[gl_VertexID], 0, 1);
-    texCoord = 0.5 * gl_Position.xy + vec2(0.5);
+    texCoord = 0.5 * vec2(gl_Position.x, -gl_Position.y) + vec2(0.5);
 }
 `;
 
@@ -317,7 +317,7 @@ export function computeCellMeans(context, processingBuffer, image, masks, maskEp
 
 export function computeImageDct(context, processingBuffer, image) {
     if (!processingBuffer.enabled) processingBuffer.enable();
-    context.gl.bindTexture(gl.TEXTURE_2D, image.texture);
+    context.gl.bindTexture(context.gl.TEXTURE_2D, image.texture);
     context.useDctProgram(processingBuffer.cellSize);
     context.drawFrame();
     return processingBuffer.readCells((pixel) => pixel[0]/255);
