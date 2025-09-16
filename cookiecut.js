@@ -461,7 +461,6 @@ export function drawValueDots(ctx, means, pixelValue, clearColor, interval, high
     for (const [rowIdx, row] of means.entries()) {
         for (const [colIdx, pixel] of row.entries()) {
             const value = pixelValue(pixel);
-            //const value = ((pixel[0]+pixel[1]+pixel[2])/3)*pixel[3];
             const [x, y] = cellCoord(rowIdx, colIdx);
             const r = value * circleRadius;
 
@@ -489,6 +488,20 @@ export function drawValueDots(ctx, means, pixelValue, clearColor, interval, high
                 ctx.fill();
             }
         }
+    }
+}
+
+export function colorInputToRGB(inputNode) {
+    // TODO branch depending on type of CSS color value string
+    const hexString = inputNode.value;
+    if (hexString.charAt(0) == '#') {
+        return [
+            parseInt(hexString.substring(1,3), 16) / 255,
+            parseInt(hexString.substring(3,5), 16) / 255,
+            parseInt(hexString.substring(5,7), 16) / 255
+        ];
+    } else {
+        throw new Error("cannot parse color string " + hexString);
     }
 }
 

@@ -42,6 +42,7 @@
 
             if (imageMeansDirty) {
                 if (image) {
+                    const masks = getMasks();
                     cellSize ??= getCellSize();
                     imageMeans = cc.computeCellMeans(
                         processContext,
@@ -51,8 +52,9 @@
                             getCellCount(cellSize, image),
                             true
                         ),
-                        image
-                    ); // TODO masks from where that lives on the DOM
+                        image,
+                        (masks.length) ? masks.map((mask) => mask.rgb) : null
+                    );
                 } else {
                     imageMeans = null;
                 }
@@ -332,6 +334,15 @@
             }));
         }
 
+        function getMasks() {
+            return Array.from(document.getElementById("masks").children)
+                .filter((element) => element.classList.contains("mask"))
+                .map((element) => ({
+                    colorNode: element.querySelector(".mask-color"),
+                    rgb: cc.colorInputToRGB(element.querySelector(".mask-color"))
+                }));
+        }
+
         function onAddLevel() {
             const level = document.createElement("div");
             level.classList.add("level");
@@ -470,6 +481,59 @@
             refreshPreview();
         }
 
+        function onAddMask() {
+            let color;
+            switch (document.querySelector('input[name="value-choice"]:checked').value) {
+                case "lights":
+                    color = "#000000";
+                    break;
+                case "darks":
+                    color = "#ffffff";
+                    break;
+                case null:
+                    console.error("no value type checked at mask creation");
+                    break;
+                default:
+                    console.error(`unrecognized pixel valuation \"${check}\"`);
+                    break;
+            }
+
+            const mask = document.createElement("div");
+            mask.classList.add("mask");
+            mask.append(document.getElementById("mask-template")
+                .content.cloneNode(true));
+
+            const colorNode = mask.querySelector("input.mask-color");
+            colorNode.addEventListener("change", onChangeMasks);
+            if (color) colorNode.value = color;
+
+            document.getElementById("masks").appendChild(mask);
+            document.getElementById("remove-mask").disabled = false;
+
+            onChangeMasks();
+        }
+
+        function onRemoveMask() {
+            const masksNode = document.getElementById("masks");
+            const masks = Array.from(masksNode.children).filter((element) =>
+                element.classList.contains("mask"));
+            if (masks.length > 0) {
+                if (masks.length == 1) {
+                    document.getElementById("remove-mask").disabled = true;
+                }
+                masksNode.removeChild(masks.at(-1));
+            } else {
+                console.error("invalid onRemoveMask() call for 0 mask elements");
+            }
+
+            onChangeMasks();
+        }
+
+        function onChangeMasks() {
+            imageMeansDirty = true;
+            refreshPreview();
+        }
+
         document.getElementById("user-image-upload").addEventListener("change", onImageUpload);
         document.getElementById("subdivisions-input").addEventListener("input", onHoverCellSize);
         document.getElementById("subdivisions-input").addEventListener("change", onSetCellSize);
@@ -481,10 +545,17 @@
         addLevel.addEventListener("click", onChangeLevels);
         removeLevel.addEventListener("click", onRemoveLevel);
         removeLevel.addEventListener("click", onChangeLevels);
+        document.getElementById("add-mask").addEventListener("click", onAddMask);
+        document.getElementById("remove-mask").addEventListener("click", onRemoveMask);
         document.querySelectorAll('input[name="value-choice"]')
             .forEach((node) =>
                 node.addEventListener("change", onChangeValueChoice));
 
+        if (getMasks().length) {
+            document.getElementById("remove-mask").disabled = false;
+        } else {
+            document.getElementById("remove-mask").disabled = true;
+        }
         onChangeLevels();
         clearOutput();
         onImageUpload();
@@ -522,6 +593,15 @@
                     <input type="text" class="level-glyph-input" maxlength="1" size="1" />
                 </template>
             </div>
+        </template>
+    </div>
+    <div id="masks-control">
+        <input type="button" id="remove-mask" value="Remove mask" />
+        <input type="button" id="add-mask" value="Add mask" />
+    </div>
+    <div id="masks">
+        <template id="mask-template">
+            <input type="color" class="mask-color"/>
         </template>
     </div>
     <input type="button" id="process-output" value="Process" />
