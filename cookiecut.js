@@ -78,7 +78,7 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
 `;
 
 // Below ~6px, all glyphs look too similar.
-const glyphPxMinimum = 6;
+export const glyphPxMinimum = 6;
 
 const defaultMaskEpsilon = 0.06;
 

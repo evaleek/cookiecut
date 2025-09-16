@@ -38,17 +38,17 @@
         let glyphThumbnailsDirty = true;
 
         function refreshPreview() {
-            const cellSize = getCellSize();
-            const cellCount = getCellCount();
+            let cellSize;
 
             if (imageMeansDirty) {
                 if (image) {
+                    cellSize ??= getCellSize();
                     imageMeans = cc.computeCellMeans(
                         processContext,
                         new cc.ProcessingBuffer(
                             processContext.gl,
                             cellSize,
-                            cellCount,
+                            getCellCount(cellSize, image),
                             true
                         ),
                         image
@@ -60,8 +60,9 @@
             }
 
             if (imageMeans) {
-                previewContext.canvas.width = cellSize[0] * cellCount[0];
-                previewContext.canvas.height = cellSize[1] * cellCount[1];
+                cellSize ??= getCellSize();
+                previewContext.canvas.width = cellSize[0] * imageMeans[0].length;
+                previewContext.canvas.height = cellSize[1] * imageMeans.length;
                 cc.drawValueDots(previewContext, imageMeans);
             } else {
                 previewContext.canvas.width = 100;
@@ -100,12 +101,14 @@
                 return;
             }
 
+            if (!imageMeans) throw new Error("missing image means at refresh");
+
             const imageDct = cc.computeImageDct(
                 processContext,
                 new cc.ProcessingBuffer(
                     processContext.gl,
                     getCellSize(),
-                    getCellCount(),
+                    [imageMeans[0].length, imageMeans.length],
                     true
                 ),
                 image
@@ -119,7 +122,7 @@
             );
             const dctLookup = new Map(chars.map((c, i) => [c, charDcts[i]]));
 
-            const thresholds = levels.map((level) => level.range.value);
+            const thresholds = levels.map((level) => level.range.valueAsNumber);
             const glyphLists = levels.map((level) =>
                 level.glyphs.map((glyph) => glyph.character));
 
@@ -160,10 +163,34 @@
         }
 
         function setImage(img) {
+            const subdivInput = document.getElementById("subdivisions-input");
             if (img) {
                 image = new cc.Image(processContext, img);
+                const w = image.size[0];
+                const h = image.size[1];
+
+                if (image.textureSizeClipped) {
+                    // TODO notify user in DOM
+                    const m = processContext.imageSizeLimit;
+                    console.warn(`image size ${w}x${h} exceeds the supported maximum ${m}x${m}`);
+                }
+
+                const minSubdivisions = 4;
+                const maxSubdivisions = 128;
+                const imgSize = Math.min(w, h);
+                const maxCellSize = Math.round(imgSize / minSubdivisions);
+                const minCellSize = Math.max(
+                    cc.glyphPxMinimum,
+                    Math.round(imgSize / maxSubdivisions)
+                );
+
+                subdivInput.disabled = false;
+                subdivInput.min = minCellSize;
+                subdivInput.max = maxCellSize;
             } else {
                 image = null;
+
+                subdivInput.disabled = true;
             }
             imageMeansDirty = true;
             refreshPreview();
@@ -203,11 +230,21 @@
         }
 
         function getCellSize() {
-            return [8, 8];
+            const subdivInput = document.getElementById("subdivisions-input");
+            if (subdivInput.disabled) {
+                console.error("request for unenabled cell size");
+            }
+            return [
+                Math.round(subdivInput.valueAsNumber),
+                Math.round(subdivInput.valueAsNumber)
+            ];
         }
 
-        function getCellCount() {
-            return [64, 64];
+        function getCellCount(cellSize, image) {
+            return [
+                Math.ceil(image.size[0] / cellSize[0]),
+                Math.ceil(image.size[1] / cellSize[1])
+            ];
         }
 
         function getLevelNodes() {
@@ -336,7 +373,7 @@
 
         document.getElementById("user-image-upload").addEventListener("change", onImageUpload);
         document.getElementById("cell-size").addEventListener("input", onHoverCellSize);
-        document.getElementById("cell-size").addEventListener("change", onSetCellSize);
+        document.getElementById("subdivisions-input").addEventListener("change", onSetCellSize);
         document.getElementById("process-output").addEventListener("click", refreshOutput);
 
         const addLevel = document.getElementById("add-level");
