@@ -468,8 +468,8 @@ export function pixelToColor(rgba) {
 }
 
 export function drawValueDots(ctx, means, pixelValue, clearColor, interval, highlightColor) {
-    const xStep = ctx.canvas.width / means.length;
-    const yStep = ctx.canvas.height / means[0].length;
+    const xStep = ctx.canvas.width / means[0].length;
+    const yStep = ctx.canvas.height / means.length;
     const cellCoord = (r, c) => [xStep*0.5 + xStep*c, yStep*0.5 + yStep*r];
     const circleRadius = Math.min(xStep, yStep) * 0.5;
 
