@@ -226,8 +226,9 @@
                 );
 
                 subdivInput.disabled = false;
-                subdivInput.min = minCellSize;
-                subdivInput.max = maxCellSize;
+                // Negate to reverse the slider
+                subdivInput.max = -minCellSize;
+                subdivInput.min = -maxCellSize;
             } else {
                 image = null;
 
@@ -268,7 +269,7 @@
                 const ctx = previewContext;
                 const width = ctx.canvas.width;
                 const height = ctx.canvas.height;
-                const cellSize = computeCellSize(e.target.valueAsNumber);
+                const cellSize = computeCellSize(-e.target.valueAsNumber);
                 const cellCount = getCellCount(cellSize, image);
                 const xStride = width/cellCount[0];
                 const yStride = height/cellCount[1];
@@ -322,7 +323,7 @@
             if (subdivInput.disabled) {
                 console.error("request for unenabled cell size");
             }
-            return computeCellSize(subdivInput.valueAsNumber);
+            return computeCellSize(-subdivInput.valueAsNumber);
         }
 
         function computeCellSize(inputValue) {
