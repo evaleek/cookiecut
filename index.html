@@ -35,6 +35,7 @@
         let image;
         let imageMeans;
         let imageMeansDirty = true;
+        let histogramDirty = true;
         let glyphThumbnailsDirty = true;
 
         function refreshPreview() {
@@ -59,6 +60,40 @@
                     imageMeans = null;
                 }
                 imageMeansDirty = false;
+            }
+
+            if (histogramDirty) {
+                if (imageMeans) {
+                    const means = imageMeans.flat(1);
+                    const bucketCount = 64; // TODO dynamic?
+                    const buckets = cc.bucketPixels(means, bucketCount, getPixelValuer());
+                    {
+                        const ctx = glyphContext;
+                        // TODO query for proper width and height
+                        ctx.canvas.width = 300;
+                        ctx.canvas.height = 150;
+
+                        const maxBucketSize = buckets
+                            .map((bucket) => bucket.length)
+                            .reduce((a, b) => Math.max(a, b));
+                        const barWidth = ctx.canvas.width / buckets.length;
+
+                        for (const [barIdx, bucket] of buckets.entries()) {
+                            if (bucket.length) {
+                                const barHeight = ctx.canvas.height*(bucket.length)/maxBucketSize;
+                                const x = barIdx * barWidth;
+                                ctx.fillStyle = cc.pixelToColor(cc.pixelMean(bucket));
+                                ctx.fillRect(x, 0, barWidth, barHeight);
+                            }
+                        }
+
+                        document.getElementById("level-histogram").src =
+                            ctx.canvas.toDataURL();
+                    }
+                } else {
+                    document.getElementById("level-histogram").src = '';
+                }
+                histogramDirty = false;
             }
 
             if (imageMeans) {
@@ -277,6 +312,7 @@
 
         function onSetCellSize(e) {
             imageMeansDirty = true;
+            histogramDirty = true;
             glyphThumbnailsDirty = true;
             refreshPreview();
         }
@@ -589,12 +625,13 @@
             </div>
             <div class="level-glyph-list">
                 <template id="level-glyph-template">
-                    <img>
+                    <img class="glyph-thumbnail">
                     <input type="text" class="level-glyph-input" maxlength="1" size="1" />
                 </template>
             </div>
         </template>
     </div>
+    <img id="level-histogram">
     <div id="masks-control">
         <input type="button" id="remove-mask" value="Remove mask" />
         <input type="button" id="add-mask" value="Add mask" />

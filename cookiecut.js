@@ -273,6 +273,22 @@ export function Image(context, img) {
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
+export function pixelMean(pixels) {
+    const premult = pixels
+        .map((pixel) => [pixel[0]*pixel[3],
+                         pixel[1]*pixel[3],
+                         pixel[2]*pixel[3],
+                         pixel[3]])
+        .reduce((a, b) => a.map((aC, i) => aC + b[i]))
+        .map((component) => component / pixels.length);
+    return (premult[3] > 0) ? [
+        premult[0] / premult[3],
+        premult[1] / premult[3],
+        premult[2] / premult[3],
+        premult[3]
+    ] : [0, 0, 0, 0];
+}
+
 export function computeCellMeans(context, processingBuffer, image, masks, maskEpsilon) {
     if (!processingBuffer.enabled) processingBuffer.enable();
     context.gl.bindTexture(context.gl.TEXTURE_2D, image.texture);
@@ -443,6 +459,14 @@ export function setGlyphImgs(glyphs, cellSize, color, glyphDrawingContext) {
     }
 }
 
+export function pixelToColor(rgba) {
+    const r = Math.floor(rgba[0] * 255);
+    const g = Math.floor(rgba[1] * 255);
+    const b = Math.floor(rgba[2] * 255);
+    const a = Math.floor(rgba[3] * 100);
+    return (a==100) ? `rgb(${r} ${g} ${b})` : `rgb(${r} ${g} ${b} / ${a}%)`;
+}
+
 export function drawValueDots(ctx, means, pixelValue, clearColor, interval, highlightColor) {
     const xStep = ctx.canvas.width / means.length;
     const yStep = ctx.canvas.height / means[0].length;
@@ -489,6 +513,16 @@ export function drawValueDots(ctx, means, pixelValue, clearColor, interval, high
             }
         }
     }
+}
+
+export function bucketCounts(pixels, bucketCount, pixelValue) {
+    const buckets = Array(bucketCount).fill(0);
+    for (const pixel of pixels) {
+        const bucketValue = Math.min(bucketCount-1,
+                            Math.floor(pixelValue(pixel)*bucketCount));
+        buckets[bucketValue] += 1;
+    }
+    return buckets;
 }
 
 export function bucketPixels(pixels, bucketCount, pixelValue) {
