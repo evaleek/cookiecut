@@ -491,6 +491,16 @@ export function drawValueDots(ctx, means, pixelValue, clearColor, interval, high
     }
 }
 
+export function bucketPixels(pixels, bucketCount, pixelValue) {
+    const buckets = Array(bucketCount).fill().map(() => []);
+    for (const pixel of pixels) {
+        const bucketValue = Math.min(bucketCount-1,
+                            Math.floor(pixelValue(pixel)*bucketCount));
+        buckets[bucketValue].push(pixel);
+    }
+    return buckets;
+}
+
 export function colorInputToRGB(inputNode) {
     // TODO branch depending on type of CSS color value string
     const hexString = inputNode.value;
