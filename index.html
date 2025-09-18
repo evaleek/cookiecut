@@ -35,7 +35,6 @@
         let image;
         let imageMeans;
         let imageMeansDirty = true;
-        let histogramDirty = true;
         let glyphThumbnailsDirty = true;
 
         function refreshPreview() {
@@ -56,14 +55,7 @@
                         image,
                         (masks.length) ? masks.map((mask) => mask.rgb) : null
                     );
-                } else {
-                    imageMeans = null;
-                }
-                imageMeansDirty = false;
-            }
 
-            if (histogramDirty) {
-                if (imageMeans) {
                     const means = imageMeans.flat(1);
                     const bucketCount = 64; // TODO dynamic?
                     const buckets = cc.bucketPixels(means, bucketCount, getPixelValuer());
@@ -91,9 +83,10 @@
                             ctx.canvas.toDataURL();
                     }
                 } else {
+                    imageMeans = null;
                     document.getElementById("level-histogram").src = '';
                 }
-                histogramDirty = false;
+                imageMeansDirty = false;
             }
 
             if (imageMeans) {
@@ -235,7 +228,6 @@
                 subdivInput.disabled = true;
             }
             imageMeansDirty = true;
-            histogramDirty = true;
             refreshPreview();
         }
 
@@ -314,7 +306,6 @@
 
         function onSetCellSize(e) {
             imageMeansDirty = true;
-            histogramDirty = true;
             glyphThumbnailsDirty = true;
             refreshPreview();
         }
@@ -516,7 +507,6 @@
 
         function onChangeValueChoice() {
             imageMeansDirty = true;
-            histogramDirty = true;
             refreshPreview();
         }
 
