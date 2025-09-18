@@ -269,6 +269,11 @@
                 const squareSize = Math.min(xStride, yStride) * cellPreviewPortion;
                 const halfSquare = 0.5*squareSize;
                 const radius = cellPreviewRadius * halfSquare;
+                const [squareWidth, squareHeight] = (cellSize[1] > cellSize[0])
+                    ? [squareSize, squareSize*(cellSize[1]/cellSize[0])]
+                    : [squareSize*(cellSize[0]/cellSize[1]), squareSize];
+                const squareHalfWidth = squareWidth * 0.5;
+                const squareHalfHeight = squareHeight * 0.5;
 
                 document.querySelectorAll(".cell-size-width-display")
                     .forEach((node) => { node.innerHTML = cellSize[0].toString(); });
@@ -289,10 +294,10 @@
                         const x = (col+0.5)*xStride;
                         const y = (row+0.5)*yStride;
                         ctx.roundRect(
-                            x-halfSquare,
-                            y-halfSquare,
-                            squareSize,
-                            squareSize,
+                            x-squareHalfWidth,
+                            y-squareHalfHeight,
+                            squareWidth,
+                            squareHeight,
                             radius
                         );
                     }
