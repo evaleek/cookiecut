@@ -34,32 +34,35 @@
 
         let image;
         let imageMeans;
-        let imageMeansDirty = true;
+        let imageDataDirty = true;
         let glyphThumbnailsDirty = true;
 
         function refreshPreview() {
             let cellSize;
 
-            if (imageMeansDirty) {
+            if (imageDataDirty) {
                 if (image) {
-                    const masks = getMasks();
                     cellSize ??= getCellSize();
-                    imageMeans = cc.computeCellMeans(
-                        processContext,
-                        new cc.ProcessingBuffer(
-                            processContext.gl,
-                            cellSize,
-                            getCellCount(cellSize, image),
-                            true
-                        ),
-                        image,
-                        (masks.length) ? masks.map((mask) => mask.rgb) : null
+                    const processBuffer = new cc.ProcessingBuffer(
+                        processContext.gl,
+                        cellSize,
+                        getCellCount(cellSize, image),
+                        true
                     );
-
-                    const means = imageMeans.flat(1);
-                    const bucketCount = 64; // TODO dynamic?
-                    const buckets = cc.bucketPixels(means, bucketCount, getPixelValuer());
                     {
+                        const masks = getMasks();
+                        imageMeans = cc.computeCellMeans(
+                            processContext,
+                            processBuffer,
+                            image,
+                            (masks.length) ? masks.map((mask) => mask.rgb) : null
+                        );
+                    }
+
+                    {
+                        const means = imageMeans.flat(1);
+                        const bucketCount = 64; // TODO dynamic?
+                        const buckets = cc.bucketPixels(means, bucketCount, getPixelValuer());
                         const ctx = glyphContext;
                         // TODO query for proper width and height
                         ctx.canvas.width = 300;
@@ -86,7 +89,7 @@
                     imageMeans = null;
                     document.getElementById("level-histogram").src = '';
                 }
-                imageMeansDirty = false;
+                imageDataDirty = false;
             }
 
             if (imageMeans) {
@@ -227,7 +230,7 @@
 
                 subdivInput.disabled = true;
             }
-            imageMeansDirty = true;
+            imageDataDirty = true;
             refreshPreview();
         }
 
@@ -310,7 +313,7 @@
         }
 
         function onSetCellSize(e) {
-            imageMeansDirty = true;
+            imageDataDirty = true;
             glyphThumbnailsDirty = true;
             refreshPreview();
         }
@@ -511,7 +514,7 @@
         }
 
         function onChangeValueChoice() {
-            imageMeansDirty = true;
+            imageDataDirty = true;
             refreshPreview();
         }
 
@@ -564,7 +567,7 @@
         }
 
         function onChangeMasks() {
-            imageMeansDirty = true;
+            imageDataDirty = true;
             refreshPreview();
         }
 
