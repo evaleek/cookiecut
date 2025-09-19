@@ -341,8 +341,8 @@ export function computeImageSobel(context, processingBuffer, image) {
     context.drawFrame();
     const sqrt2 = Math.sqrt(2);
     return processingBuffer.readCells((pixel) => ({
-        gradient: [pixel[0], pixel[1]],
-        magnitude: pixel[2]*sqrt2
+        gradient: [pixel[0]/255, pixel[1]/255],
+        magnitude: (pixel[2]/255)*sqrt2
     }));
 }
 
