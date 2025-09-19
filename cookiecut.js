@@ -58,7 +58,7 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
         vec2 screenCoord = vec2(texCoord.x, 1.0-texCoord.y);
         vec2 cell = floor(screenCoord/cellSize);
         vec2 cellBase = cell*cellSize;
-        vec2 freqUV = (screenCoord-cellBase)/pixelSize;
+        vec2 freqUV = floor((screenCoord-cellBase)/pixelSize);
         float dct = 0.0;
         for (float cellPixelX = 0.0; cellPixelX < cellPixelSize.x; cellPixelX += 1.0) {
             for (float cellPixelY = 0.0; cellPixelY < cellPixelSize.y; cellPixelY += 1.0) {
@@ -66,14 +66,15 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
                 vec2 pixelScreenCoord = cellPixel*pixelSize+cellBase;
                 vec4 pixel = texture(image, vec2(pixelScreenCoord.x, 1.0-pixelScreenCoord.y));
                 float pixelValue = length(pixel.rgb)*(1.0/sqrt(3.0))*pixel.a;
-                vec2 dctXY = pixelValue * ( 1.0 + cos(
-                    (vec2(3.1415926538)/cellPixelSize)
-                    * (cellPixel+0.5)
-                    * freqUV));
-                dct += 0.25*(dctXY.x+dctXY.y);
+                pixelValue -= 0.5;
+                vec2 cosine = cos( ((2.0*cellPixel+1.0)*freqUV*3.14159265358979323846)
+                                  / (2.0*cellPixelSize) );
+                dct += pixelValue*cosine.x*cosine.y;
             }
         }
-        outColor = vec4(dct/(cellPixelSize.x*cellPixelSize.y), 0, 0, 1);
+        dct /= 0.25*cellPixelSize.x*cellPixelSize.y;
+        dct += 0.5;
+        outColor = vec4(dct, 0, 0, 1);
     }
 `;
 
@@ -348,14 +349,14 @@ export function computeImageDct(context, processingBuffer, image) {
     if (!processingBuffer.enabled) processingBuffer.enable();
     context.gl.bindTexture(context.gl.TEXTURE_2D, image.texture);
     context.useDctProgram(processingBuffer.cellSize);
-    const program = context.dctPrograms.get(cellSize.join());
+    const program = context.dctPrograms.get(processingBuffer.cellSize.join());
     context.gl.uniform2f(context.gl.getUniformLocation(program, "pixelSize"),
         1 / processingBuffer.width, 1 / processingBuffer.height);
     context.gl.uniform2f(context.gl.getUniformLocation(program, "cellSize"),
         processingBuffer.cellSize[0] / processingBuffer.width,
         processingBuffer.cellSize[1] / processingBuffer.height);
     context.drawFrame();
-    return processingBuffer.readCells((pixel) => pixel[0]/255);
+    return processingBuffer.readCells((pixel) => (pixel[0]/255)-0.5);
 }
 
 export function computeGlyphDcts(context, cellSize, characters, glyphDrawingContext) {
