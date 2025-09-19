@@ -339,9 +339,10 @@ export function computeImageSobel(context, processingBuffer, image) {
     context.gl.uniform2f(context.gl.getUniformLocation(context.sobelProgram, "pixelSize"),
         1 / processingBuffer.width, 1 / processingBuffer.height);
     context.drawFrame();
+    const sqrt2 = Math.sqrt(2);
     return processingBuffer.readCells((pixel) => ({
         gradient: [pixel[0], pixel[1]],
-        magnitude: pixel[2]
+        magnitude: pixel[2]*sqrt2
     }));
 }
 
@@ -356,7 +357,7 @@ export function computeImageDct(context, processingBuffer, image) {
         processingBuffer.cellSize[0] / processingBuffer.width,
         processingBuffer.cellSize[1] / processingBuffer.height);
     context.drawFrame();
-    return processingBuffer.readCells((pixel) => (pixel[0]/255)-0.5);
+    return processingBuffer.readCells((pixel) => (pixel[0]/255)*2.0-1.0);
 }
 
 export function computeGlyphDcts(context, cellSize, characters, glyphDrawingContext) {
