@@ -191,8 +191,8 @@ export function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
         throw new Error("unexpected cell size value: " + cellSize);
     this.cellSize = cellSize;
 
-    const width = cellSize[0] * cellCount[0];
-    const height = cellSize[1] * cellCount[1];
+    this.width = cellSize[0] * cellCount[0];
+    this.height = cellSize[1] * cellCount[1];
 
     this.texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -200,7 +200,7 @@ export function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height,
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height,
         0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
     this.framebuffer = gl.createFramebuffer();
@@ -210,25 +210,25 @@ export function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
 
     this.enabled = enabled;
     if (enabled) {
-        gl.viewport(0, 0, width, height);
+        gl.viewport(0, 0, this.width, this.height);
     } else {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     this.enable = () => {
-        gl.BindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-        gl.viewport(0, 0, width, height);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        gl.viewport(0, 0, this.width, this.height);
         this.enabled = true;
     }
     this.disable = () => {
-        gl.BindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         this.enabled = false;
     }
 
     this.readCells = function (mapPixel) {
-        let pixelBuffer = new Uint8Array(width*height*4);
-        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBuffer);
+        let pixelBuffer = new Uint8Array(this.width*this.height*4);
+        gl.readPixels(0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, pixelBuffer);
         return new Array(cellCount[1]).fill()
             .map((_, gridRow) => new Array(cellCount[0]).fill()
             .map((_, gridColumn) => new Array(cellSize[1]).fill()
@@ -239,13 +239,12 @@ export function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
                 const pixelRow = (pixelRowCellBase * cellSize[1])
                                  + pixelRowCellOffset;
                 const pixelColumn = gridColumn * cellSize[0] + cellColumn;
-                const index = (pixelRow * width + pixelColumn) * 4;
+                const index = (pixelRow * this.width + pixelColumn) * 4;
                 const pixel = pixelBuffer.slice(index, index+4);
                 return mapPixel ? mapPixel(pixel) : pixel;
         }))));
     };
 }
-
 
 export function Image(context, img) {
     const gl = context.gl;
@@ -332,10 +331,29 @@ export function computeCellMeans(context, processingBuffer, image, masks, maskEp
     return means;
 }
 
+export function computeImageSobel(context, processingBuffer, image) {
+    if (!processingBuffer.enabled) processingBuffer.enable();
+    context.gl.bindTexture(context.gl.TEXTURE_2D, image.texture);
+    context.gl.useProgram(context.sobelProgram);
+    context.gl.uniform2f(context.gl.getUniformLocation(context.sobelProgram, "pixelSize"),
+        1 / processingBuffer.width, 1 / processingBuffer.height);
+    context.drawFrame();
+    return processingBuffer.readCells((pixel) => ({
+        gradient: [pixel[0], pixel[1]],
+        magnitude: pixel[2]
+    }));
+}
+
 export function computeImageDct(context, processingBuffer, image) {
     if (!processingBuffer.enabled) processingBuffer.enable();
     context.gl.bindTexture(context.gl.TEXTURE_2D, image.texture);
     context.useDctProgram(processingBuffer.cellSize);
+    const program = context.dctPrograms.get(cellSize.join());
+    context.gl.uniform2f(context.gl.getUniformLocation(program, "pixelSize"),
+        1 / processingBuffer.width, 1 / processingBuffer.height);
+    context.gl.uniform2f(context.gl.getUniformLocation(program, "cellSize"),
+        processingBuffer.cellSize[0] / processingBuffer.width,
+        processingBuffer.cellSize[1] / processingBuffer.height);
     context.drawFrame();
     return processingBuffer.readCells((pixel) => pixel[0]/255);
 }
