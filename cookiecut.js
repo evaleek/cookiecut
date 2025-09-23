@@ -78,8 +78,7 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
     }
 `;
 
-// Below ~6px, all glyphs look too similar.
-export const glyphPxMinimum = 6;
+export const glyphPxMinimum = 8;
 
 const defaultMaskEpsilon = 0.06;
 
@@ -258,8 +257,6 @@ export function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
     };
 }
 
-export const cellSizeConstant = 8;
-
 export function Image(context, img, cellCount) {
     const gl = context.gl;
 
@@ -267,8 +264,8 @@ export function Image(context, img, cellCount) {
     const cellAspect = (img.naturalWidth/this.cellCount[0])
                      / (img.naturalHeight/this.cellCount[1]);
     this.cellSize = (cellAspect>=1.0)
-        ? [ Math.round(cellSizeConstant*cellAspect), cellSizeConstant ]
-        : [ cellSizeConstant, Math.round(cellSizeConstant/cellAspect) ];
+        ? [ Math.round(glyphPxMinimum*cellAspect), glyphPxMinimum ]
+        : [ glyphPxMinimum, Math.round(glyphPxMinimum/cellAspect) ];
     const scaledWidth = this.cellSize[0]*this.cellCount[0];
     const scaledHeight = this.cellSize[1]*this.cellCount[1];
 
