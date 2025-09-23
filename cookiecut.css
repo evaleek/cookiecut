@@ -1,0 +1,88 @@
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: inherit;
+}
+
+body {
+    box-sizing: border-box;
+}
+
+.glyph-thumbnail {
+    width: 1em;
+    height: auto;
+    image-rendering: pixelated;
+}
+
+.cookiecut {
+    margin: 1em 4em;
+    display: grid;
+    grid-template-columns: [start] 20em [start-center] auto [end-center] 20em [end];
+    grid-template-rows: [start] 8em [start-center] auto [end-center] 8em [end];
+    grid-template-areas:
+        "header header header"
+        "start-side main end-side"
+        "start-side footer end-side";
+}
+
+.cookiecut .image-selection-control {
+    grid-area: header;
+    justify-self: start;
+}
+
+.image-selection-control {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.image-selection-control * {
+    object-fit: contain;
+}
+
+.image-selection-control img {
+    min-width: 0;
+    min-height: 0;
+}
+
+.cookiecut .preview-container {
+    margin: 0 6em;
+    max-width: 64em;
+    grid-area: main;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.cookiecut .preview-container * {
+    flex: 0;
+    object-fit: contain;
+}
+
+.cookiecut .cookiecut-start-side {
+    grid-area: start-side;
+}
+
+.cookiecut .cookiecut-end-side {
+    grid-area: end-side;
+}
+
+.cookiecut-start-side, .cookiecut-end-side {
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+#levels {
+    display: flex;
+    flex-direction: column;
+}
+
+.level {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.level-glyph-input {
+    text-align: center;
+}
