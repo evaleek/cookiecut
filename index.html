@@ -208,7 +208,7 @@
                 }
 
                 const matchIdx = glyphList
-                    .map((glyph) => cc.dctLowFreqDistance(dct, dctLookup.get(glyph)))
+                    .map((glyph) => cc.dctGradientDistance(dct, dctLookup.get(glyph)))
                     .reduce((leastIdx, dist, curIdx, distances) =>
                         (dist < distances[leastIdx]) ? curIdx : leastIdx, 0);
 
