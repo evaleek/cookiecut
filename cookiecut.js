@@ -416,7 +416,7 @@ export function computeImageDct(context, processingBuffer, image) {
     return processingBuffer.readCells((pixel) => (pixel[0]/255)*2.0-1.0);
 }
 
-export function computeGlyphDcts(context, cellSize, characters, glyphDrawingContext) {
+export function computeGlyphDcts(context, cellSize, valueCheck, characters, glyphDrawingContext) {
     for (const character of characters) {
         if (character.length != 1 || typeof character !== 'string')
             throw new Error("character parameter was not a length-1 string");
@@ -436,10 +436,32 @@ export function computeGlyphDcts(context, cellSize, characters, glyphDrawingCont
     ctx.font = `${Math.min(...cellSize)}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'black';
+    switch (valueCheck) {
+        case 'lights':
+            ctx.fillStyle = 'black';
+            break;
+        case 'darks':
+            ctx.fillStyle = 'white';
+            break;
+        case null:
+            throw new Error("missing value check at glyph DCT computation");
+        default:
+            throw new Error(`unrecognized value check \"${valueCheck}\"`);
+    }
     ctx.fillRect(0, 0, size[0], size[1]);
 
-    ctx.fillStyle = 'white';
+    switch (valueCheck) {
+        case 'lights':
+            ctx.fillStyle = 'white';
+            break;
+        case 'darks':
+            ctx.fillStyle = 'black';
+            break;
+        case null:
+            throw new Error("missing value check at glyph DCT computation");
+        default:
+            throw new Error(`unrecognized value check \"${valueCheck}\"`);
+    }
     for (const [index, character] of characters.entries()) {
         const column = index % gridSize;
         const row = Math.floor(index/gridSize);
