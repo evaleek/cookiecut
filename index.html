@@ -4,21 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CookieCut</title>
-    <style>
-        #levels {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .level {
-            display: flex;
-            flex-direction: row;
-        }
-
-        .level-glyph-input {
-            text-align: center;
-        }
-    </style>
+    <link href="./cookiecut.css" rel="stylesheet">
 </head>
 <body>
     <script type="module" src="./cookiecut.js"></script>
@@ -667,49 +653,67 @@
     </script>
     <canvas id="webgl-canvas" style="display: none;"></canvas>
     <canvas id="glyph-canvas" style="display: none;"></canvas>
-    <img id="user-image">
-    <input type="range" id="subdivisions-input" step="1" disabled />
+    <main class="cookiecut">
+        <div class="preview-container">
+            <canvas id="preview-canvas"></canvas>
+        </div>
+        <div class="image-selection-control">
+            <div class="image-selection-control-header">
+                <input type="file" id="user-image-upload" accept="image/*" />
+            </div>
+            <img id="user-image">
+        </div>
+        <div class="cookiecut-start-side">
+            <div class="levels-control-container">
+                <div id="levels-control">
+                    <input type="button" id="remove-level" value="Remove level" />
+                    <input type="button" id="add-level" value="Add level" />
+                </div>
+                <div id="levels">
+                    <template id="level-template">
+                        <input type="range" class="level-range" step="any" max="1" style="inline-size:100%;" />
+                        <div class="level-glyph-control">
+                            <input type="button" class="level-remove-glyph" value="Remove glyph" />
+                            <input type="button" class="level-add-glyph" value="Add glyph" />
+                        </div>
+                        <div class="level-glyph-list">
+                            <template id="level-glyph-template">
+                                <img class="glyph-thumbnail">
+                                <input type="text" class="level-glyph-input" maxlength="1" size="1" />
+                            </template>
+                        </div>
+                    </template>
+                </div>
+                <img id="level-histogram">
+            </div>
+        </div>
+        <div class="cookiecut-end-side">
+            <div class="subdiv-container">
+                <input type="range" id="subdivisions-input" step="1" disabled />
+            </div>
+            <div class="value-choice-container">
+                <input type="radio" id="value-lights-choice" name="value-choice" value="lights" checked />
+                <label for="value-lights-choice">Value lights</label>
+                <input type="radio" id="value-darks-choice" name="value-choice" value="darks" />
+                <label for="value-darks-choice">Value darks</label>
+            </div>
+            <div class="masks-container">
+                <div id="masks-control">
+                    <input type="button" id="remove-mask" value="Remove mask" />
+                    <input type="button" id="add-mask" value="Add mask" />
+                </div>
+                <div id="masks">
+                    <template id="mask-template">
+                        <input type="color" class="mask-color"/>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </main>
     <span class="cell-size-width-display"></span>
     <span class="cell-size-height-display"></span>
     <span class="cell-count-width-display"></span>
     <span class="cell-count-height-display"></span>
-    <input type="file" id="user-image-upload" accept="image/*" />
-    <canvas id="preview-canvas"></canvas>
-    <div>
-        <input type="radio" id="value-lights-choice" name="value-choice" value="lights" checked />
-        <label for="value-lights-choice">Value lights</label>
-        <input type="radio" id="value-darks-choice" name="value-choice" value="darks" />
-        <label for="value-darks-choice">Value darks</label>
-    </div>
-    <div id="levels-control">
-        <input type="button" id="remove-level" value="Remove level" />
-        <input type="button" id="add-level" value="Add level" />
-    </div>
-    <div id="levels">
-        <template id="level-template">
-            <input type="range" class="level-range" step="any" max="1" style="inline-size:100%;" />
-            <div class="level-glyph-control">
-                <input type="button" class="level-remove-glyph" value="Remove glyph" />
-                <input type="button" class="level-add-glyph" value="Add glyph" />
-            </div>
-            <div class="level-glyph-list">
-                <template id="level-glyph-template">
-                    <img class="glyph-thumbnail">
-                    <input type="text" class="level-glyph-input" maxlength="1" size="1" />
-                </template>
-            </div>
-        </template>
-    </div>
-    <img id="level-histogram">
-    <div id="masks-control">
-        <input type="button" id="remove-mask" value="Remove mask" />
-        <input type="button" id="add-mask" value="Add mask" />
-    </div>
-    <div id="masks">
-        <template id="mask-template">
-            <input type="color" class="mask-color"/>
-        </template>
-    </div>
     <input type="button" id="process-output" value="Process" />
     <textarea id="output" readonly></textarea>
 </body>
