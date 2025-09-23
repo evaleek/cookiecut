@@ -92,7 +92,7 @@ export const isCellSize = (cellSize) => (
 
 export const colorDistance = (a, b) => Math.hypot(...(a.map((aC, i) => aC - b[i])));
 
-export const dctDistance = (a, b) => {
+export const dctGradientDistance = (a, b) => {
     const maxRow = a.length - 1;
     const maxColumn = a[0].length - 1;
     const maxIdx = maxRow + maxColumn + 1;
@@ -102,6 +102,17 @@ export const dctDistance = (a, b) => {
         (1-( (rowIdx+colIdx) / maxIdx )) * Math.abs(b[rowIdx][colIdx] - x) ))
         .reduce((x, y) => x + y);
 }
+
+export const dctLowFreqDistance = (a, b) => {
+    const rows = Math.round(a.length*0.5);
+    const columns = Math.round(a[0].length*0.5);
+
+    const lowFreqA = a.map((row) => row.slice(0, columns+1)).slice(0, rows+1);
+    const lowFreqB = b.map((row) => row.slice(0, columns+1)).slice(0, rows+1);
+
+    return a.map((row, rowIdx) => row.map((x, colIdx) =>
+        Math.abs(b[rowIdx][colIdx] - x))).reduce((x, y) => x+y);
+};
 
 export function Context(canvas, cellSizes) {
     this.gl = (canvas ?? document.createElement("canvas")).getContext("webgl2");
@@ -449,7 +460,7 @@ export function computeGlyphDcts(context, cellSize, characters, glyphDrawingCont
 
     context.useDctProgram(cellSize);
     context.drawFrame();
-    const resultCells = result.readCells((pixel) => pixel[0]/255);
+    const resultCells = result.readCells((pixel) => (pixel[0]/255)*2.0-1.0);
 
     return resultCells.flat(1).slice(0, characters.length);
 }
