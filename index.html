@@ -33,6 +33,7 @@
         const previewContext = document.getElementById("preview-canvas").getContext("2d");
 
         let image;
+        let fullImage;
         let imageMeans;
         let imageEdges;
         let imageDataDirty = true;
@@ -42,12 +43,12 @@
             let cellSize;
 
             if (imageDataDirty) {
-                if (image) {
+                if (fullImage) {
                     cellSize ??= getCellSize();
                     const processBuffer = new cc.ProcessingBuffer(
                         processContext.gl,
                         cellSize,
-                        getCellCount(cellSize, image),
+                        getCellCount(cellSize, fullImage),
                         true
                     );
 
@@ -56,7 +57,7 @@
                         imageMeans = cc.computeCellMeans(
                             processContext,
                             processBuffer,
-                            image,
+                            fullImage,
                             (masks.length) ? masks.map((mask) => mask.rgb) : null
                         );
                     }
@@ -65,7 +66,7 @@
                         const edgeCells = cc.computeImageSobel(
                             processContext,
                             processBuffer,
-                            image
+                            fullImage
                         );
                         const invSqrt2 = 1 / Math.sqrt(2);
                         imageEdges = edgeCells.map((row) => row.map((block) => {
@@ -111,25 +112,46 @@
 
             if (imageMeans) {
                 cellSize ??= getCellSize();
-                // TODO keep preview canvas at a constant resolution,
-                // but adjust *aspect ratio* to match new image
-                previewContext.canvas.width = cellSize[0] * imageMeans[0].length;
-                previewContext.canvas.height = cellSize[1] * imageMeans.length;
+                const imgWidth = cellSize[0] * imageMeans[0].length;
+                const imgHeight = cellSize[1] * imageMeans.length;
+                const container = previewContext.canvas.parentNode;
+                if (container.classList?.contains("preview-container")) {
+                    const imgAspect = imgWidth/imgHeight;
+                    previewContext.canvas.width = container.offsetWidth;
+                    previewContext.canvas.height = container.offsetWidth * imgAspect
+                } else {
+                    previewContext.canvas.height = imgWidth;
+                    previewContext.canvas.width = imgHeight;
+                }
                 cc.drawValueDots(previewContext, imageMeans, getPixelValuer());
             } else {
-                previewContext.canvas.width = 100;
-                previewContext.canvas.height = 100;
+                previewContext.canvas.width = 1;
+                previewContext.canvas.height = 1;
                 previewContext.clearRect(0, 0, previewContext.canvas.width,
                                                previewContext.canvas.height);
             }
 
             if (glyphThumbnailsDirty) {
                 const glyphs = getLevels().map((level) => level.glyphs).flat();
+                let color;
+                switch (document.querySelector('input[name="value-choice"]:checked').value) {
+                    case 'lights':
+                        color = 'white';
+                        break;
+                    case 'darks':
+                        color = 'black';
+                        break;
+                    case null:
+                        throw new Error("missing value check at glyph redraw");
+                    default:
+                        throw new Error(`unrecognized value check \"${valueCheck}\"`);
+                }
                 if (glyphs.length) cc.setGlyphImgs(
-                    glyphs.map((glyph) => [glyph.character,
+                    glyphs.filter((glyph) => glyph.character)
+                          .map((glyph) => [glyph.character,
                                            glyph.node.querySelector("img")]),
                     getCellSize(),
-                    'black', // TODO glyph color?
+                    color,
                     glyphContext
                 );
                 glyphThumbnailsDirty = false;
@@ -146,7 +168,8 @@
         function refreshOutput() {
             const levels = getLevels();
             const chars = [...new Set(levels.map((level) =>
-                level.glyphs.map((glyph) => glyph.character)).flat())];
+                level.glyphs.map((glyph) => glyph.character)
+                .filter((c) => c)).flat())];
 
             if ((!image) || chars.length == 0) {
                 clearOutput();
@@ -154,21 +177,16 @@
             }
 
             if (!imageMeans) throw new Error("missing image means at refresh");
+            if ( ( image.cellCount[0] != imageMeans[0].length ) ||
+                 ( image.cellCount[1] != imageMeans.length )
+            ) throw new Error("imageMeans cell count does not match the image");
 
-            const imageDct = cc.computeImageDct(
-                processContext,
-                new cc.ProcessingBuffer(
-                    processContext.gl,
-                    getCellSize(),
-                    [imageMeans[0].length, imageMeans.length],
-                    true
-                ),
-                image
-            );
+            const imageDct = cc.computeImageDct(processContext, image);
 
             const charDcts = cc.computeGlyphDcts(
                 processContext,
-                getCellSize(),
+                image.cellSize,
+                document.querySelector('input[name="value-choice"]:checked').value,
                 chars,
                 glyphContext
             );
@@ -176,7 +194,8 @@
 
             const thresholds = levels.map((level) => level.range.valueAsNumber);
             const glyphLists = levels.map((level) =>
-                level.glyphs.map((glyph) => glyph.character));
+                level.glyphs.map((glyph) => glyph.character)
+                    .filter((c) => c));
 
             const valuer = getPixelValuer();
 
@@ -203,7 +222,7 @@
                 }
 
                 const matchIdx = glyphList
-                    .map((glyph) => cc.dctDistance(dct, dctLookup.get(glyph)))
+                    .map((glyph) => cc.dctLowFreqDistance(dct, dctLookup.get(glyph)))
                     .reduce((leastIdx, dist, curIdx, distances) =>
                         (dist < distances[leastIdx]) ? curIdx : leastIdx, 0);
 
@@ -219,11 +238,11 @@
         function setImage(img) {
             const subdivInput = document.getElementById("subdivisions-input");
             if (img) {
-                image = new cc.Image(processContext, img);
-                const w = image.size[0];
-                const h = image.size[1];
+                fullImage = new cc.FullImage(processContext, img);
+                const w = fullImage.size[0];
+                const h = fullImage.size[1];
 
-                if (image.textureSizeClipped) {
+                if (fullImage.textureSizeClipped) {
                     // TODO notify user in DOM
                     const m = processContext.imageSizeLimit;
                     console.warn(`image size ${w}x${h} exceeds the supported maximum ${m}x${m}`);
@@ -242,8 +261,15 @@
                 // Negate to reverse the slider
                 subdivInput.max = -minCellSize;
                 subdivInput.min = -maxCellSize;
+
+                image = new cc.Image(
+                    processContext,
+                    img,
+                    getCellCount(getCellSize(), fullImage)
+                );
             } else {
                 image = null;
+                fullImage = null;
 
                 subdivInput.disabled = true;
             }
@@ -274,7 +300,7 @@
         }
 
         function onHoverCellSize(e) {
-            if (image) {
+            if (fullImage) {
                 // TODO inherit from style
                 const gridColor = 'darkgray';
                 const cellPreviewPortion = 0.8;
@@ -283,7 +309,7 @@
                 const width = ctx.canvas.width;
                 const height = ctx.canvas.height;
                 const cellSize = computeCellSize(-e.target.valueAsNumber);
-                const cellCount = getCellCount(cellSize, image);
+                const cellCount = getCellCount(cellSize, fullImage);
                 const xStride = width/cellCount[0];
                 const yStride = height/cellCount[1];
                 const squareSize = Math.min(xStride, yStride) * cellPreviewPortion;
@@ -330,6 +356,7 @@
         }
 
         function onSetCellSize(e) {
+            onImageUpload(); // TODO kind of hacky
             imageDataDirty = true;
             glyphThumbnailsDirty = true;
             refreshPreview();
@@ -350,10 +377,10 @@
             ];
         }
 
-        function getCellCount(cellSize, image) {
+        function getCellCount(cellSize, fullImage) {
             return [
-                Math.ceil(image.size[0] / cellSize[0]),
-                Math.ceil(image.size[1] / cellSize[1])
+                Math.ceil(fullImage.size[0] / cellSize[0]),
+                Math.ceil(fullImage.size[1] / cellSize[1])
             ];
         }
 
@@ -474,10 +501,23 @@
                             img.src = '';
                         } else if (e.target.value.length == 1) {
                             glyph.characterValue = e.target.value;
+                            let color;
+                            switch (document.querySelector('input[name="value-choice"]:checked').value) {
+                                case 'lights':
+                                    color = 'white';
+                                    break;
+                                case 'darks':
+                                    color = 'black';
+                                    break;
+                                case null:
+                                    throw new Error("missing value check at glyph redraw");
+                                default:
+                                    throw new Error(`unrecognized value check \"${valueCheck}\"`);
+                            }
                             img.src = cc.glyphDataUrl(
                                 e.target.value,
                                 getCellSize(),
-                                'black', // TODO glyph color?
+                                color,
                                 glyphContext
                             );
                         } else {
@@ -532,6 +572,7 @@
 
         function onChangeValueChoice() {
             imageDataDirty = true;
+            glyphThumbnailsDirty = true;
             refreshPreview();
         }
 
@@ -604,6 +645,16 @@
         document.querySelectorAll('input[name="value-choice"]')
             .forEach((node) =>
                 node.addEventListener("change", onChangeValueChoice));
+
+        let timeout = false;
+        window.addEventListener("resize", function () {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                previewContext.canvas.height = 1;
+                previewContext.canvas.width = 1;
+                refreshPreview()
+            }, 5);
+        });
 
         if (getMasks().length) {
             document.getElementById("remove-mask").disabled = false;

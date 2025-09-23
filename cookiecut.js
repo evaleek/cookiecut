@@ -270,7 +270,7 @@ export function Image(context, img, cellCount) {
         ? [ Math.round(cellSizeConstant*cellAspect), cellSizeConstant ]
         : [ cellSizeConstant, Math.round(cellSizeConstant/cellAspect) ];
     const scaledWidth = this.cellSize[0]*this.cellCount[0];
-    const scaledHeight = this.cellSize[1]*this.cellCount[1]*
+    const scaledHeight = this.cellSize[1]*this.cellCount[1];
 
     this.texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -402,18 +402,17 @@ export function computeImageSobel(context, processingBuffer, image) {
     }));
 }
 
-export function computeImageDct(context, processingBuffer, image) {
-    if (!processingBuffer.enabled) processingBuffer.enable();
+export function computeImageDct(context, image) {
+    const buffer = new ProcessingBuffer(context.gl, image.cellSize, image.cellCount, true);
     context.gl.bindTexture(context.gl.TEXTURE_2D, image.texture);
-    context.useDctProgram(processingBuffer.cellSize);
-    const program = context.dctPrograms.get(processingBuffer.cellSize.join());
+    context.useDctProgram(image.cellSize);
+    const program = context.dctPrograms.get(buffer.cellSize.join());
     context.gl.uniform2f(context.gl.getUniformLocation(program, "pixelSize"),
-        1 / processingBuffer.width, 1 / processingBuffer.height);
+        1 / buffer.width, 1 / buffer.height);
     context.gl.uniform2f(context.gl.getUniformLocation(program, "cellSize"),
-        processingBuffer.cellSize[0] / processingBuffer.width,
-        processingBuffer.cellSize[1] / processingBuffer.height);
+        buffer.cellSize[0] / buffer.width, buffer.cellSize[1] / buffer.height);
     context.drawFrame();
-    return processingBuffer.readCells((pixel) => (pixel[0]/255)*2.0-1.0);
+    return buffer.readCells((pixel) => (pixel[0]/255)*2.0-1.0);
 }
 
 export function computeGlyphDcts(context, cellSize, valueCheck, characters, glyphDrawingContext) {
