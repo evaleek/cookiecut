@@ -247,7 +247,52 @@ export function ProcessingBuffer(gl, cellSize, cellCount, enabled) {
     };
 }
 
-export function Image(context, img) {
+export const cellSizeConstant = 8;
+
+export function Image(context, img, cellCount) {
+    const gl = context.gl;
+
+    this.cellCount = cellCount;
+    const cellAspect = (img.naturalWidth/this.cellCount[0])
+                     / (img.naturalHeight/this.cellCount[1]);
+    this.cellSize = (cellAspect>=1.0)
+        ? [ Math.round(cellSizeConstant*cellAspect), cellSizeConstant ]
+        : [ cellSizeConstant, Math.round(cellSizeConstant/cellAspect) ];
+    const scaledWidth = this.cellSize[0]*this.cellCount[0];
+    const scaledHeight = this.cellSize[1]*this.cellCount[1]*
+
+    this.texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, scaledWidth, scaledHeight,
+        0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+    const framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D, this.texture, 0);
+
+    gl.viewport(0, 0, scaledWidth, scaledHeight);
+
+    const originTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, originTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+
+    gl.useProgram(context.redrawProgram);
+    context.drawFrame();
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+export function FullImage(context, img) {
     const gl = context.gl;
 
     this.size = [img.naturalWidth, img.naturalHeight];
