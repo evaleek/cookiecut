@@ -590,6 +590,28 @@
     </script>
     <canvas id="webgl-canvas" style="display: none;"></canvas>
     <canvas id="glyph-canvas" style="display: none;"></canvas>
+    <div style="margin:2em;">
+        <p>
+            Thank you for trying out CookieCut!
+            The software is not well-tested and may still have minor bugs.
+        </p>
+        <p>
+            Because the UI is not very intuitive yet, here are instructions for use (sorry for the wall of text for now)
+        </p>
+        <ul>
+            <li>Select a file below. It will be automatically processed, loaded, and shown in the center preview.</li>
+            <li>The image is divided into a grid of cells. Each cell will be replaced with a single ASCII character. The cell size can be adjusted with the slider to the right.</li>
+            <li>Each cell is assigned a strength based on its average color. The center preview draws larger circles for cells with higher strengths.</li>
+            <li>You should choose whether the image should be processed as a dark foreground on light background, or light background on dark foreground, by selecting either "Value lights" or "Value darks". The cell preview in the center will immediately reflect the new strengths.</li>
+            <li>Finally, we have choose what ASCII characters we want to assign to which cell strengths. This is done by dividing the cells into one or more levels, at the upper left.</li>
+            <li>You can add and remove as many levels as you like. There must be at least one in order to create the output. A single level covering the entire range means "assign all cells to this level".</li>
+            <li>We can separate out parts of the image into multiple levels. When adjusting the strength slider for a level, the cells of the image that are affected are highlighted in the center preview. When the image is processed, all cells within a level are assigned charcters from that level. If there are no characters, they will always be whitespace.</li>
+            <li>To assign possible characters to a level, click "Edit level" and type in one or more characters. Whitespace will be ignored. If more than one character is assigned to a level, the character that best matches the rough pattern of that cell will be picked.</li>
+            <li>The most common pattern is to leave the first (top-most) level empty, and adjust it until it covers everything we want to treat as background. Then, create more levels for however much detail you want to segment the image (3-8 generally). Make sure the last level is all the way to the right, unless you want to exclude some of the highest strength cells.</li>
+            <li>The histogram below the level sliders shows the frequencies of cell colors in the image, sorted left-to-right by strength. They may not be aligned correctly, but this should roughly indicate the strengths of different areas of the image.</li>
+            <li>When you have at least one level with characters, you can press "Process" to write the output into the text box. In the future there will be options for font, spacing, and writing the output to images as well.</li>
+        </ul>
+    </div>
     <main class="cookiecut">
         <div class="preview-container">
             <canvas id="preview-canvas"></canvas>
