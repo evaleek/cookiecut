@@ -103,7 +103,7 @@
                 if (container.classList?.contains("preview-container")) {
                     const imgAspect = imgWidth/imgHeight;
                     previewContext.canvas.width = container.offsetWidth;
-                    previewContext.canvas.height = container.offsetWidth * imgAspect
+                    previewContext.canvas.height = container.offsetWidth / imgAspect
                 } else {
                     previewContext.canvas.height = imgWidth;
                     previewContext.canvas.width = imgHeight;
@@ -190,6 +190,17 @@
             output.value = outputGrid.map((row) => row.join('')).join('\n');
         }
 
+        function updateCellSizePreview(cellSize, cellCount) {
+            document.querySelectorAll(".cell-size-width-display")
+                .forEach((node) => { node.innerHTML = cellSize[0].toString(); });
+            document.querySelectorAll(".cell-size-height-display")
+                .forEach((node) => { node.innerHTML = cellSize[1].toString(); });
+            document.querySelectorAll(".cell-count-width-display")
+                .forEach((node) => { node.innerHTML = cellCount[0].toString(); });
+            document.querySelectorAll(".cell-count-height-display")
+                .forEach((node) => { node.innerHTML = cellCount[1].toString(); });
+        }
+
         function setImage(img) {
             const subdivInput = document.getElementById("subdivisions-input");
             if (img) {
@@ -217,10 +228,15 @@
                 subdivInput.max = -minCellSize;
                 subdivInput.min = -maxCellSize;
 
+                const cellSize = computeCellSize(-subdivInput.valueAsNumber);
+                const cellCount = getCellCount(cellSize, fullImage);
+
+                updateCellSizePreview(cellSize, cellCount);
+
                 image = new cc.Image(
                     processContext,
                     img,
-                    getCellCount(getCellSize(), fullImage)
+                    cellCount
                 );
             } else {
                 image = null;
@@ -276,14 +292,7 @@
                 const squareHalfWidth = squareWidth * 0.5;
                 const squareHalfHeight = squareHeight * 0.5;
 
-                document.querySelectorAll(".cell-size-width-display")
-                    .forEach((node) => { node.innerHTML = cellSize[0].toString(); });
-                document.querySelectorAll(".cell-size-height-display")
-                    .forEach((node) => { node.innerHTML = cellSize[1].toString(); });
-                document.querySelectorAll(".cell-count-width-display")
-                    .forEach((node) => { node.innerHTML = cellCount[0].toString(); });
-                document.querySelectorAll(".cell-count-height-display")
-                    .forEach((node) => { node.innerHTML = cellCount[1].toString(); });
+                updateCellSizePreview(cellSize, cellCount);
 
                 ctx.fillStyle = gridColor;
                 ctx.clearRect(0, 0, width, height);
@@ -612,6 +621,12 @@
         </div>
         <div class="cookiecut-end-side">
             <div class="subdiv-container">
+                <div class="subdiv-display">
+                    <span class="cell-size-width-display"></span>
+                    <span class="cell-size-height-display"></span>
+                    <span class="cell-count-width-display"></span>
+                    <span class="cell-count-height-display"></span>
+                </div>
                 <input type="range" id="subdivisions-input" step="1" disabled />
             </div>
             <div class="value-choice-container">
@@ -633,10 +648,6 @@
             </div>
         </div>
     </main>
-    <span class="cell-size-width-display"></span>
-    <span class="cell-size-height-display"></span>
-    <span class="cell-count-width-display"></span>
-    <span class="cell-count-height-display"></span>
     <input type="button" id="process-output" value="Process" />
     <textarea id="output" readonly></textarea>
 </body>
