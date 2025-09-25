@@ -616,14 +616,18 @@
             <li>We can separate out parts of the image into multiple levels. When adjusting the strength slider for a level, the cells of the image that are affected are highlighted in the center preview. When the image is processed, all cells within a level are assigned charcters from that level. If there are no characters, they will always be whitespace.</li>
             <li>To assign possible characters to a level, click "Edit level" and type in one or more characters. Whitespace will be ignored. If more than one character is assigned to a level, the character that best matches the rough pattern of that cell will be picked.</li>
             <li>The most common pattern is to leave the first (top-most) level empty, and adjust it until it covers everything we want to treat as background. Then, create more levels for however much detail you want to segment the image (3-8 generally). Make sure the last level is all the way to the right, unless you want to exclude some of the highest strength cells.</li>
+            <li>You generally want to assign each level a bigger character or set of characters for higher strengths. For example, use ".", ":", "-", "=", etc.</li>
             <li>The histogram below the level sliders shows the frequencies of cell colors in the image, sorted left-to-right by strength. They may not be aligned correctly, but this should roughly indicate the strengths of different areas of the image.</li>
             <li>When you have at least one level with characters, you can press "Process" to write the output into the text box. In the future there will be options for font, spacing, and writing the output to images as well.</li>
+            <li>There is no built background detection yet, so you might get the best results by masking out the image's background in another app before bringing it here.</li>
         </ol>
         <p>
             Some things that will be added in the future:
             <ol>
                 <li>Visually intuitive UI</li>
                 <li>Automatic default levels and immediate automatic output processing</li>
+                <li>Manual output touch-ups</li>
+                <li>Edge detection</li>
                 <li>Font selection</li>
                 <li>Output character colors and other post-processing</li>
                 <li>Eyedrop mask color selection</li>
