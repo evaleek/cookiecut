@@ -23,7 +23,6 @@
         let imageMeans;
         let imageEdges;
         let imageDataDirty = true;
-        let glyphThumbnailsDirty = true;
 
         function refreshPreview() {
             let cellSize;
@@ -116,32 +115,6 @@
                 previewContext.clearRect(0, 0, previewContext.canvas.width,
                                                previewContext.canvas.height);
             }
-
-            if (glyphThumbnailsDirty) {
-                const glyphs = getLevels().map((level) => level.glyphs).flat();
-                let color;
-                switch (document.querySelector('input[name="value-choice"]:checked').value) {
-                    case 'lights':
-                        color = 'white';
-                        break;
-                    case 'darks':
-                        color = 'black';
-                        break;
-                    case null:
-                        throw new Error("missing value check at glyph redraw");
-                    default:
-                        throw new Error(`unrecognized value check \"${valueCheck}\"`);
-                }
-                if (glyphs.length) cc.setGlyphImgs(
-                    glyphs.filter((glyph) => glyph.character)
-                          .map((glyph) => [glyph.character,
-                                           glyph.node.querySelector("img")]),
-                    getCellSize(),
-                    color,
-                    glyphContext
-                );
-                glyphThumbnailsDirty = false;
-            }
         }
 
         function clearOutput() {
@@ -153,9 +126,7 @@
 
         function refreshOutput() {
             const levels = getLevels();
-            const chars = [...new Set(levels.map((level) =>
-                level.glyphs.map((glyph) => glyph.character)
-                .filter((c) => c)).flat())];
+            const chars = [...new Set(levels.map((level) => level.glyphs).flat())];
 
             if ((!image) || chars.length == 0) {
                 clearOutput();
@@ -179,9 +150,7 @@
             const dctLookup = new Map(chars.map((c, i) => [c, charDcts[i]]));
 
             const thresholds = levels.map((level) => level.range.valueAsNumber);
-            const glyphLists = levels.map((level) =>
-                level.glyphs.map((glyph) => glyph.character)
-                    .filter((c) => c));
+            const glyphLists = levels.map((level) => level.glyphs);
 
             const valuer = getPixelValuer();
 
@@ -344,7 +313,6 @@
         function onSetCellSize(e) {
             onImageUpload(); // TODO kind of hacky
             imageDataDirty = true;
-            glyphThumbnailsDirty = true;
             refreshPreview();
         }
 
@@ -392,12 +360,9 @@
         function getLevels() {
             return getLevelNodes().map((element) => ({
                 range: element.querySelector("input[type=\"range\"].level-range"),
-                glyphs: Array.from(element.querySelector(".level-glyph-list").children)
-                            .filter((child) => child.classList.contains("level-glyph"))
-                            .map((child) => ({
-                                node: child,
-                                character: child.characterValue
-                            }))
+                glyphs: element.querySelector(".level-glyph-edit")
+                    .querySelector(".level-glyph-edit-glyphs")
+                    .value.split("").filter((c) => /\S/.test(c))
             }));
         }
 
@@ -467,58 +432,22 @@
             range.addEventListener("mouseup", highlightCells(hoverHighlightColor));
             range.addEventListener("mouseleave", clearCells);
 
-            const addGlyphButton = level.querySelector(".level-glyph-control > .level-add-glyph");
-            const removeGlyphButton = level.querySelector(".level-glyph-control > .level-remove-glyph");
-            removeGlyphButton.disabled = true;
-            addGlyphButton.addEventListener("click", () => {
-                const glyph = document.createElement("div");
-                glyph.classList.add("level-glyph");
-                glyph.append(document.getElementById("level-glyph-template")
-                    .content.cloneNode(true));
-                glyph.characterValue = null;
-                level.querySelector(".level-glyph-list").appendChild(glyph);
-                removeGlyphButton.disabled = false;
-
-                const img = glyph.querySelector("img");
-                glyph.querySelector(".level-glyph-input")
-                    .addEventListener("input", (e) => {
-                        if (e.target.value == ' ' || e.target.value == '') {
-                            glyph.characterValue = null;
-                            img.src = '';
-                        } else if (e.target.value.length == 1) {
-                            glyph.characterValue = e.target.value;
-                            let color;
-                            switch (document.querySelector('input[name="value-choice"]:checked').value) {
-                                case 'lights':
-                                    color = 'white';
-                                    break;
-                                case 'darks':
-                                    color = 'black';
-                                    break;
-                                case null:
-                                    throw new Error("missing value check at glyph redraw");
-                                default:
-                                    throw new Error(`unrecognized value check \"${valueCheck}\"`);
-                            }
-                            img.src = cc.glyphDataUrl(
-                                e.target.value,
-                                getCellSize(),
-                                color,
-                                glyphContext
-                            );
-                        } else {
-                            console.error(`unexpected glyph input string \"${e.target.value}\"`);
-                        }
-                    });
+            const selectButton = level.querySelector(".level-glyph-select");
+            const editBox = level.querySelector(".level-glyph-edit");
+            editBox.style.display = "none";
+            editBox.querySelector(".level-glyph-edit-glyphs").disabled = true;
+            const closeButton = editBox.querySelector(".level-glyph-edit-exit");
+            closeButton.addEventListener("click", () => {
+                editBox.style.display = "none";
+                editBox.querySelector(".level-glyph-edit-glyphs").disabled = true;
             });
-            removeGlyphButton.addEventListener("click", () => {
-                const list = level.querySelector(".level-glyph-list");
-                const glyphs = Array.from(list.children)
-                    .filter((element) => element.classList.contains("level-glyph"));
-                if (glyphs.length > 0) {
-                    if (glyphs.length == 1) removeGlyphButton.disabled = true;
-                    list.removeChild(glyphs.at(-1));
-                }
+            selectButton.addEventListener("click", () => {
+                Array.from(document.getElementById("levels").children)
+                    .filter((element) => element.classList.contains("level"))
+                    .map((element) => element.querySelector(".level-glyph-edit"))
+                    .forEach((element) => { element.style.display = "none"; });
+                editBox.style.display = "block";
+                editBox.querySelector(".level-glyph-edit-glyphs").disabled = false;
             });
 
             document.getElementById("levels").appendChild(level);
@@ -558,7 +487,6 @@
 
         function onChangeValueChoice() {
             imageDataDirty = true;
-            glyphThumbnailsDirty = true;
             refreshPreview();
         }
 
@@ -672,15 +600,10 @@
                 <div id="levels">
                     <template id="level-template">
                         <input type="range" class="level-range" step="any" max="1" style="inline-size:100%;" />
-                        <div class="level-glyph-control">
-                            <input type="button" class="level-remove-glyph" value="Remove glyph" />
-                            <input type="button" class="level-add-glyph" value="Add glyph" />
-                        </div>
-                        <div class="level-glyph-list">
-                            <template id="level-glyph-template">
-                                <img class="glyph-thumbnail">
-                                <input type="text" class="level-glyph-input" maxlength="1" size="1" />
-                            </template>
+                        <input type="button" class="level-glyph-select" value="Edit level" />
+                        <div class="level-glyph-edit">
+                            <input type="text" class="level-glyph-edit-glyphs" disabled />
+                            <input type="button" class="level-glyph-edit-exit" value="Close level edit" />
                         </div>
                     </template>
                 </div>
