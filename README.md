@@ -1,4 +1,4 @@
-# CookieCut - An ASCII art image processing webapp
+# CookieCut
 
 __CookieCut__ is a client-side, GPU-accelerated JavaScript
 image processing tool to create ASCII art representations of user images.
