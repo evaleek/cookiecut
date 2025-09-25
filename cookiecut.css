@@ -14,6 +14,10 @@ body {
     image-rendering: pixelated;
 }
 
+div p {
+    margin: 1em;
+}
+
 .cookiecut {
     margin: 1em 4em;
     display: grid;
