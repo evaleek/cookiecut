@@ -24,7 +24,10 @@ compute the discrete cosine transform of each cell.
 ### Frequency domain pattern matching
 
 When the user inputs more than one character to represent a cell value threshold,
-CookieCut picks for each cell the character best matching its rough greyscale pattern.
-Downscaled candidate glyphs are best-fit to downscaled image cells
-by least total distance of the lower-frequency components
-of each of their [discrete cosine transforms](https://wikipedia.org/wiki/Discrete_cosine_transform).
+CookieCut picks for each cell the character best matching its rough greyscale pattern
+by comparison in the frequency domain.
+
+- The candidate glyphs and image cell are each downscaled to 8 pixels
+- The [discrete cosine transform](https://wikipedia.org/wiki/Discrete_cosine_transform) of each is taken
+- Each candidate glyph is compared to the cell by distance of the lower-frequency components
+- The least total distance glyph is selected to represent the cell
