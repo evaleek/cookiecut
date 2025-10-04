@@ -78,6 +78,15 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
     }
 `;
 
+export const tilesets = {
+    total: [
+        'm',
+        'e',
+        'o',
+        'w'
+    ]
+};
+
 export const glyphPxMinimum = 8;
 
 const defaultMaskEpsilon = 0.06;
