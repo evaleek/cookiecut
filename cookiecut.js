@@ -195,8 +195,7 @@ export const strongGlyphs = [
 ];
 
 export const solidGlyphs = [
-    '#',
-    '■'
+    '#'
 ];
 
 export const defaultTileset = [
