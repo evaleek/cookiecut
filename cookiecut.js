@@ -78,14 +78,20 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
     }
 `;
 
-export const tilesets = {
-    total: [
-        'm',
-        'e',
-        'o',
-        'w'
+export const defaultTileset = [
+    [],
+    [
+        '.'
+    ], [
+        ':'
+    ], [
+        '*', '+'
+    ], [
+        'O', '0'
+    ], [
+        '=', '@'
     ]
-};
+];
 
 export const glyphPxMinimum = 8;
 

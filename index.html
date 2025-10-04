@@ -586,18 +586,17 @@
         }
 
         {
-            const defaultThresholdCount = 6;
-            const defaultTileset = cc.tilesets.total;
+            const defaultThresholdCount = cc.defaultTileset.length;
 
             const thresholdStep = 1.0 / defaultThresholdCount;
-            for (const step of Array(defaultThresholdCount+1).keys()) {
+            for (const step of Array(defaultThresholdCount).keys()) {
                 onAddLevel();
                 const node = getLevelNodes().at(-1);
                 const level = node.querySelector("input[type=\"range\"].level-range");
                 const glyphs = node.querySelector(".level-glyph-edit")
                                    .querySelector(".level-glyph-edit-glyphs");
-                level.valueAsNumber = thresholdStep * (step);
-                glyphs.value = defaultTileset.join('');
+                level.valueAsNumber = thresholdStep * (step+1);
+                glyphs.value = cc.defaultTileset[step].join('');
             }
         }
         onChangeLevels();
