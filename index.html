@@ -584,7 +584,20 @@
         } else {
             document.getElementById("remove-mask").disabled = true;
         }
+
+        {
+            const defaultThresholdCount = 6;
+
+            const thresholdStep = 1.0 / defaultThresholdCount;
+            for (const step of Array(defaultThresholdCount+1).keys()) {
+                onAddLevel();
+                const level = getLevelNodes().at(-1)
+                    .querySelector("input[type=\"range\"].level-range");
+                level.valueAsNumber = thresholdStep * (step);
+            }
+        }
         onChangeLevels();
+
         clearOutput();
         onImageUpload();
     </script>
