@@ -660,6 +660,16 @@
         levelsDiv.addEventListener("mouseenter", onEnterLevelEditArea)
         levelsDiv.addEventListener("mouseleave", onExitLevelEditArea)
 
+        let timeout = false;
+        window.addEventListener("resize", function () {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                previewContext.canvas.height = 1;
+                previewContext.canvas.width = 1;
+                refreshPreview();
+            }, 100);
+        })
+
         if (getMasks().length) {
             document.getElementById("remove-mask").disabled = false;
         } else {
