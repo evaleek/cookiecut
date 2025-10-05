@@ -22,7 +22,9 @@
         let fullImage;
         let imageMeans;
         let imageEdges;
+        let glyphOutput;
         let imageDataDirty = true;
+        let isEditingLevels = false;
 
         function refreshPreview() {
             let cellSize;
@@ -108,7 +110,11 @@
                     previewContext.canvas.height = imgWidth;
                     previewContext.canvas.width = imgHeight;
                 }
-                cc.drawValueDots(previewContext, imageMeans, getPixelValuer());
+                if (isEditingLevels) {
+                    cc.drawValueDots(previewContext, imageMeans, getPixelValuer());
+                } else {
+                    refreshOutput();
+                }
             } else {
                 previewContext.canvas.width = 1;
                 previewContext.canvas.height = 1;
@@ -125,69 +131,73 @@
         }
 
         function refreshOutput() {
-            const levels = getLevels();
-            const chars = [...new Set(levels.map((level) => level.glyphs).flat())];
+            if (!glyphOutput) {
+                console.log("rebuilding glyph output");
 
-            if ((!image) || chars.length == 0) {
-                clearOutput();
-                return;
+                const levels = getLevels();
+                const chars = [...new Set(levels.map((level) => level.glyphs).flat())];
+
+                if ((!image) || chars.length == 0) {
+                    clearOutput();
+                    return;
+                }
+
+                if (!imageMeans) throw new Error("missing image means at refresh");
+                if ( ( image.cellCount[0] != imageMeans[0].length ) ||
+                     ( image.cellCount[1] != imageMeans.length )
+                ) throw new Error("imageMeans cell count does not match the image");
+
+                const imageDct = cc.computeImageDct(processContext, image);
+
+                const charDcts = cc.computeGlyphDcts(
+                    processContext,
+                    image.cellSize,
+                    document.querySelector('input[name="value-choice"]:checked').value,
+                    chars,
+                    glyphContext
+                );
+                const dctLookup = new Map(chars.map((c, i) => [c, charDcts[i]]));
+
+                const thresholds = levels.map((level) => level.range.valueAsNumber);
+                const glyphLists = levels.map((level) => level.glyphs);
+
+                const valuer = getPixelValuer();
+
+                glyphOutput = imageDct.map((row, rowIdx) => row.map((dct, colIdx) => {
+                    const mean = imageMeans[rowIdx][colIdx];
+                    const value = valuer(mean);
+
+                    let levelIdx = 0;
+                    for (const threshold of thresholds) {
+                        if (value > threshold) {
+                            levelIdx += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (levelIdx >= levels.length) return ' ';
+
+                    const glyphList = glyphLists[levelIdx].map((glyph) => glyph ?? ' ');
+
+                    if (glyphList.length == 1) {
+                        return glyphList[0];
+                    } else if (glyphList.length == 0) {
+                        return ' ';
+                    }
+
+                    const matchIdx = glyphList
+                        .map((glyph) => cc.dctLowFreqDistance(dct, dctLookup.get(glyph)))
+                        .reduce((leastIdx, dist, curIdx, distances) =>
+                            (dist < distances[leastIdx]) ? curIdx : leastIdx, 0);
+
+                    return glyphList[matchIdx];
+                }));
             }
 
-            if (!imageMeans) throw new Error("missing image means at refresh");
-            if ( ( image.cellCount[0] != imageMeans[0].length ) ||
-                 ( image.cellCount[1] != imageMeans.length )
-            ) throw new Error("imageMeans cell count does not match the image");
-
-            const imageDct = cc.computeImageDct(processContext, image);
-
-            const charDcts = cc.computeGlyphDcts(
-                processContext,
-                image.cellSize,
-                document.querySelector('input[name="value-choice"]:checked').value,
-                chars,
-                glyphContext
-            );
-            const dctLookup = new Map(chars.map((c, i) => [c, charDcts[i]]));
-
-            const thresholds = levels.map((level) => level.range.valueAsNumber);
-            const glyphLists = levels.map((level) => level.glyphs);
-
-            const valuer = getPixelValuer();
-
-            const outputGrid = imageDct.map((row, rowIdx) => row.map((dct, colIdx) => {
-                const mean = imageMeans[rowIdx][colIdx];
-                const value = valuer(mean);
-
-                let levelIdx = 0;
-                for (const threshold of thresholds) {
-                    if (value > threshold) {
-                        levelIdx += 1;
-                    } else {
-                        break;
-                    }
-                }
-                if (levelIdx >= levels.length) return ' ';
-
-                const glyphList = glyphLists[levelIdx].map((glyph) => glyph ?? ' ');
-
-                if (glyphList.length == 1) {
-                    return glyphList[0];
-                } else if (glyphList.length == 0) {
-                    return ' ';
-                }
-
-                const matchIdx = glyphList
-                    .map((glyph) => cc.dctLowFreqDistance(dct, dctLookup.get(glyph)))
-                    .reduce((leastIdx, dist, curIdx, distances) =>
-                        (dist < distances[leastIdx]) ? curIdx : leastIdx, 0);
-
-                return glyphList[matchIdx];
-            }));
-
             const output = document.getElementById("output");
-            output.rows = outputGrid.length;
-            output.cols = outputGrid[0].length;
-            output.value = outputGrid.map((row) => row.join('')).join('\n');
+            output.rows = glyphOutput.length;
+            output.cols = glyphOutput[0].length;
+            output.value = glyphOutput.map((row) => row.join('')).join('\n');
         }
 
         function updateCellSizePreview(cellSize, cellCount) {
@@ -245,6 +255,7 @@
                 subdivInput.disabled = true;
             }
             imageDataDirty = true;
+            glyphOutput = null;
             refreshPreview();
         }
 
@@ -322,6 +333,7 @@
         function onSetCellSize(e) {
             onImageUpload(); // TODO kind of hacky
             imageDataDirty = true;
+            glyphOutput = null;
             refreshPreview();
         }
 
@@ -336,7 +348,7 @@
         function computeCellSize(inputValue) {
             return [
                 Math.round(inputValue),
-                Math.round(2.0*inputValue)
+                Math.round(inputValue)
             ];
         }
 
@@ -440,6 +452,9 @@
             range.addEventListener("mouseenter", highlightCells(hoverHighlightColor));
             range.addEventListener("mouseup", highlightCells(hoverHighlightColor));
             range.addEventListener("mouseleave", clearCells);
+            range.addEventListener("change", () => {
+                glyphOutput = null;
+            });
 
             const selectButton = level.querySelector(".level-glyph-select");
             const editBox = level.querySelector(".level-glyph-edit");
@@ -492,10 +507,12 @@
             } else {
                 removeLevel.disabled = true;
             }
+            glyphOutput = null;
         }
 
         function onChangeValueChoice() {
             imageDataDirty = true;
+            glyphOutput = null;
             refreshPreview();
         }
 
@@ -549,6 +566,17 @@
 
         function onChangeMasks() {
             imageDataDirty = true;
+            glyphOutput = null;
+            refreshPreview();
+        }
+
+        function onEnterLevelEditArea() {
+            isEditingLevels = true;
+            refreshPreview();
+        }
+
+        function onExitLevelEditArea() {
+            isEditingLevels = false;
             refreshPreview();
         }
 
@@ -568,16 +596,9 @@
         document.querySelectorAll('input[name="value-choice"]')
             .forEach((node) =>
                 node.addEventListener("change", onChangeValueChoice));
-
-        let timeout = false;
-        window.addEventListener("resize", function () {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                previewContext.canvas.height = 1;
-                previewContext.canvas.width = 1;
-                refreshPreview()
-            }, 5);
-        });
+        const levelsDiv = document.querySelector("div.levels-control-container");
+        levelsDiv.addEventListener("mouseenter", onEnterLevelEditArea)
+        levelsDiv.addEventListener("mouseleave", onExitLevelEditArea)
 
         if (getMasks().length) {
             document.getElementById("remove-mask").disabled = false;

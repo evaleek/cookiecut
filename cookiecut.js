@@ -207,7 +207,7 @@ export const defaultTileset = [
     solidGlyphs
 ];
 
-export const glyphPxMinimum = 8;
+export const glyphPxMinimum = 12;
 
 const defaultMaskEpsilon = 0.06;
 
