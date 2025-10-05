@@ -145,7 +145,7 @@
                 if (!imageMeans) throw new Error("missing image means at refresh");
                 if ( ( image.cellCount[0] != imageMeans[0].length ) ||
                      ( image.cellCount[1] != imageMeans.length )
-                ) throw new Error("imageMeans cell count does not match the image");
+                ) throw new Error(`imageMeans cell count ${imageMeans[0].length}x${imageMeans.length} does not match the image cell count ${image.cellCount[0]}x${image.cellCount[1]}`);
 
                 const imageDct = cc.computeImageDct(processContext, image);
 
@@ -249,6 +249,26 @@
                 .forEach((node) => { node.innerHTML = cellCount[0].toString(); });
             document.querySelectorAll(".cell-count-height-display")
                 .forEach((node) => { node.innerHTML = cellCount[1].toString(); });
+        }
+
+        function updateImage(e) {
+            if (fullImage) {
+                const img = document.getElementById("user-image");
+                if (!img.src) throw new Error("image did not exist on image update");
+
+                const cellSize = computeCellSize(-e.target.valueAsNumber);
+                const cellCount = getCellCount(cellSize, fullImage);
+
+                updateCellSizePreview(cellSize, cellCount);
+
+                image = new cc.Image(
+                    processContext,
+                    img,
+                    cellCount
+                );
+            } else {
+                throw new Error("fullImage did not exist on image update");
+            }
         }
 
         function setImage(img) {
@@ -371,7 +391,7 @@
         }
 
         function onSetCellSize(e) {
-            onImageUpload(); // TODO kind of hacky
+            updateImage(e);
             imageDataDirty = true;
             glyphOutput = null;
             refreshPreview();
