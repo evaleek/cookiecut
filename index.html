@@ -132,7 +132,7 @@
 
         function refreshOutput() {
             if (!glyphOutput) {
-                console.log("rebuilding glyph output");
+                // console.log("rebuilding glyph output");
 
                 const levels = getLevels();
                 const chars = [...new Set(levels.map((level) => level.glyphs).flat())];

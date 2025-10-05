@@ -208,6 +208,7 @@ export const defaultTileset = [
 ];
 
 export const glyphPxMinimum = 8;
+export const glyphPxMaximum = 16;
 
 const defaultMaskEpsilon = 0.06;
 
@@ -390,11 +391,20 @@ export function Image(context, img, cellCount) {
     const gl = context.gl;
 
     this.cellCount = cellCount;
-    const cellAspect = (img.naturalWidth/this.cellCount[0])
-                     / (img.naturalHeight/this.cellCount[1]);
+
+    const naturalXDivs = img.naturalWidth / this.cellCount[0];
+    const naturalYDivs = img.naturalHeight / this.cellCount[1];
+    const naturalGlyphPx = (Math.round(Math.max(naturalXDivs, naturalYDivs)*0.5)*2.0);
+    const glyphPx = Math.max(glyphPxMinimum, Math.min(naturalGlyphPx, glyphPxMaximum));
+
+    //console.log(`new glyph px: ${glyphPx}`);
+
+    const cellAspect = naturalXDivs / naturalYDivs;
+    //const cellAspect = (img.naturalWidth/this.cellCount[0])
+    //                 / (img.naturalHeight/this.cellCount[1]);
     this.cellSize = (cellAspect>=1.0)
-        ? [ Math.round(glyphPxMinimum*cellAspect), glyphPxMinimum ]
-        : [ glyphPxMinimum, Math.round(glyphPxMinimum/cellAspect) ];
+        ? [ Math.round(glyphPx*cellAspect), glyphPx ]
+        : [ glyphPx, Math.round(glyphPx/cellAspect) ];
     const scaledWidth = this.cellSize[0]*this.cellCount[0];
     const scaledHeight = this.cellSize[1]*this.cellCount[1];
 
