@@ -84,7 +84,6 @@ export const defaultLightEven = "rgb(252, 252, 252)";
 export const defaultLightOdd = "rgb(248, 248, 248)";
 
 export const edgeGlyphs = [
-    '_',
     '-',
     '|',
     '/',
@@ -222,7 +221,20 @@ export const colorDistance = (a, b) => Math.hypot(...(a.map((aC, i) => aC - b[i]
 
 export const dctDistance = (a, b) => {
     const multiBase = Math.abs(a[0][0] - b[0][0]) * (a.length/2);
-    return dctLowFreqDistance(a, b) + multiBase;
+    return dctLowDiagonalDistance(a, b) + multiBase;
+}
+
+export const dctLowDiagonalDistance = (a, b) => {
+    const maxIdx = Math.max(a.length, a[0].length)
+    let dist = 0;
+    for (let rowIdx = 0; rowIdx < a.length; rowIdx++) {
+        for (let colIdx = 0; colIdx < a[rowIdx].length; colIdx++) {
+            if (rowIdx+colIdx < maxIdx) {
+                dist += Math.abs(b[rowIdx][colIdx] - a[rowIdx][colIdx]);
+            }
+        }
+    }
+    return dist;
 }
 
 export const dctGradientDistance = (a, b) => {
@@ -237,8 +249,8 @@ export const dctGradientDistance = (a, b) => {
 }
 
 export const dctLowFreqDistance = (a, b) => {
-    const rows = Math.round(a.length*0.5);
-    const columns = Math.round(a[0].length*0.5);
+    const rows = Math.round(a.length*(2/3));
+    const columns = Math.round(a[0].length*(2/3));
 
     const lowFreqA = a.map((row) => row.slice(0, columns+1)).slice(0, rows+1);
     const lowFreqB = b.map((row) => row.slice(0, columns+1)).slice(0, rows+1);
