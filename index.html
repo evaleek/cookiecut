@@ -220,24 +220,47 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            {
-                const check = document.querySelector('input[name="value-choice"]:checked').value;
-                switch (check) {
-                    case "lights":
-                        ctx.fillStyle = 'white';
-                        break;
-                    case "darks":
-                        ctx.fillStyle = 'black';
-                        break;
-                    case null:
-                        throw new Error("no value type checked at pixel valuation");
-                    default:
-                        throw new Error(`unrecognized pixel valuation \"${check}\"`);
-                }
+            let glyphColor;
+            const glyphColorChoice = document.querySelector('input[name="output-cell-color-choice"]:checked').value;
+            switch (glyphColorChoice) {
+                case null:
+                    console.warn("no output glyph color choice checked at draw time");
+                default:
+                    console.error(`unrecognized output color glyph choice \"${glyphColorChoice}\"`);
+                case "cell-mean":
+                    glyphColor = null;
+                    break;
+                case "global":
+                    glyphColor = null; // TODO
+                    break;
             }
+
+            if (!glyphColor && !imageMeans) {
+                console.error("missing image means when glyph color choice selection is cell mean");
+                glyphColor = null; // TODO
+            }
+
+            //{
+            //    const check = document.querySelector('input[name="value-choice"]:checked').value;
+            //    switch (check) {
+            //        case "lights":
+            //            ctx.fillStyle = 'white';
+            //            break;
+            //        case "darks":
+            //            ctx.fillStyle = 'black';
+            //            break;
+            //        case null:
+            //            throw new Error("no value type checked at pixel valuation");
+            //        default:
+            //            throw new Error(`unrecognized pixel valuation \"${check}\"`);
+            //    }
+            //}
 
             for (const [cellY, row] of glyphOutput.entries()) {
                 for (const [cellX, glyph] of row.entries()) {
+                    if (!glyphColor) {
+                        ctx.fillStyle = cc.pixelToColor(imageMeans[cellY][cellX].slice(0, 3));
+                    }
                     const x = cellX * xStep + xBase;
                     const y = cellY * yStep + yBase;
                     ctx.fillText(glyph ?? ' ', x, y);
@@ -793,6 +816,12 @@
         </div>
         <div class="preview-container">
             <canvas id="preview-canvas"></canvas>
+        </div>
+        <div class="output-config control-container">
+            <input type="radio" id="use-cell-mean" name="output-cell-color-choice" value="cell-mean" checked />
+            <label for="use-cell-mean">Use average tile color</label>
+            <input type="radio" id="use-global-color" name="output-cell-color-choice" value="global" />
+            <label for="use-global-color">Use global color</label>
         </div>
         <div class="output-container control-container">
             <button type="button" class="container-collapse">Text output</button>

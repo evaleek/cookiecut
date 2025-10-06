@@ -190,7 +190,7 @@ export const middleGlyphs = [
 ];
 
 export const strongGlyphs = [
-    '◼',
+    //'◼',
     '=',
     '&',
     '%',
@@ -708,12 +708,18 @@ export function setGlyphImgs(glyphs, cellSize, color, glyphDrawingContext) {
     }
 }
 
-export function pixelToColor(rgba) {
-    const r = Math.floor(rgba[0] * 255);
-    const g = Math.floor(rgba[1] * 255);
-    const b = Math.floor(rgba[2] * 255);
-    const a = Math.floor(rgba[3] * 100);
-    return (a==100) ? `rgb(${r} ${g} ${b})` : `rgb(${r} ${g} ${b} / ${a}%)`;
+export function pixelToColor(pixel) {
+    const r = Math.floor(pixel[0] * 255);
+    const g = Math.floor(pixel[1] * 255);
+    const b = Math.floor(pixel[2] * 255);
+    if (pixel.length == 4) {
+        const a = Math.floor(pixel[3] * 100);
+        return (a==100) ? `rgb(${r} ${g} ${b})` : `rgb(${r} ${g} ${b} / ${a}%)`;
+    } else if (pixel.length == 3) {
+        return `rgb(${r} ${g} ${b})`;
+    } else {
+        throw new Error(`invalid color value: ${pixel}`);
+    }
 }
 
 export function drawBackground(ctx, cellCount, valueChoice, backgroundColor) {
