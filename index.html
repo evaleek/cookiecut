@@ -619,12 +619,15 @@
 
         function onChangeValueChoice() {
             const globalGlyphColor = document.getElementById("global-glyph-color");
+            const backgroundColor = document.getElementById("solid-color-background");
             switch (document.querySelector('input[name="value-choice"]:checked').value) {
                 case "lights":
                     globalGlyphColor.value = cc.rgbToHexColor([1, 1, 1]);
+                    backgroundColor.value = cc.rgbToHexColor([0, 0, 0]);
                     break;
                 case "darks":
                     globalGlyphColor.value = cc.rgbToHexColor([0, 0, 0]);
+                    backgroundColor.value = cc.rgbToHexColor([1, 1, 1]);
                     break;
                 case null:
                     console.error("no value type checked at mask creation");
