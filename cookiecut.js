@@ -819,6 +819,20 @@ export function bucketPixels(pixels, bucketCount, pixelValue) {
     return buckets;
 }
 
+export function rgbToHexColor(color) {
+    const r = (Math.min(255, Math.round(color[0]*255))).toString(16);
+    const g = (Math.min(255, Math.round(color[1]*255))).toString(16);
+    const b = (Math.min(255, Math.round(color[2]*255))).toString(16);
+    if (color.length == 4) {
+        const a = (Math.min(255, Math.round(color[3]*255))).toString(16);
+        return '#' + r + g + b + a;
+    } else if (color.length == 3) {
+        return '#' + r + g + b;
+    } else {
+        throw new Error("unrecognized color value " + color);
+    }
+}
+
 export function colorInputToRGB(inputNode) {
     // TODO branch depending on type of CSS color value string
     const hexString = inputNode.value;

@@ -220,46 +220,31 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            let glyphColor;
+            const globalColor = cc.pixelToColor(cc.colorInputToRGB(document.getElementById("global-glyph-color")));
+
             const glyphColorChoice = document.querySelector('input[name="output-cell-color-choice"]:checked').value;
-            switch (glyphColorChoice) {
-                case null:
-                    console.warn("no output glyph color choice checked at draw time");
-                default:
-                    console.error(`unrecognized output color glyph choice \"${glyphColorChoice}\"`);
-                case "cell-mean":
-                    glyphColor = null;
-                    break;
-                case "global":
-                    glyphColor = null; // TODO
-                    break;
-            }
 
-            if (!glyphColor && !imageMeans) {
-                console.error("missing image means when glyph color choice selection is cell mean");
-                glyphColor = null; // TODO
+            if (!imageMeans) {
+                console.error("missing image means at glyph draw time");
             }
-
-            //{
-            //    const check = document.querySelector('input[name="value-choice"]:checked').value;
-            //    switch (check) {
-            //        case "lights":
-            //            ctx.fillStyle = 'white';
-            //            break;
-            //        case "darks":
-            //            ctx.fillStyle = 'black';
-            //            break;
-            //        case null:
-            //            throw new Error("no value type checked at pixel valuation");
-            //        default:
-            //            throw new Error(`unrecognized pixel valuation \"${check}\"`);
-            //    }
-            //}
 
             for (const [cellY, row] of glyphOutput.entries()) {
                 for (const [cellX, glyph] of row.entries()) {
-                    if (!glyphColor) {
-                        ctx.fillStyle = cc.pixelToColor(imageMeans[cellY][cellX].slice(0, 3));
+                    switch (glyphColorChoice) {
+                        case null:
+                            console.warn("no output glyph color choice checked at draw time");
+                        default:
+                            console.error(`unrecognized output color glyph choice \"${glyphColorChoice}\"`);
+                        case "cell-mean":
+                            if (imageMeans) {
+                                ctx.fillStyle = cc.pixelToColor(imageMeans[cellY][cellX].slice(0, 3));
+                            } else {
+                                ctx.fillStyle = globalColor;
+                            }
+                            break;
+                        case "global":
+                            ctx.fillStyle = globalColor;
+                            break;
                     }
                     const x = cellX * xStep + xBase;
                     const y = cellY * yStep + yBase;
@@ -615,6 +600,22 @@
         }
 
         function onChangeValueChoice() {
+            const globalGlyphColor = document.getElementById("global-glyph-color");
+            switch (document.querySelector('input[name="value-choice"]:checked').value) {
+                case "lights":
+                    globalGlyphColor.value = cc.rgbToHexColor([1, 1, 1]);
+                    break;
+                case "darks":
+                    globalGlyphColor.value = cc.rgbToHexColor([0, 0, 0]);
+                    break;
+                case null:
+                    console.error("no value type checked at mask creation");
+                    break;
+                default:
+                    console.error(`unrecognized pixel valuation \"${check}\"`);
+                    break;
+            }
+
             imageDataDirty = true;
             glyphOutput = null;
             refreshPreview();
@@ -700,8 +701,26 @@
             .forEach((node) =>
                 node.addEventListener("change", onChangeValueChoice));
         const levelsDiv = document.querySelector("div.levels-control-subcontainer");
-        levelsDiv.addEventListener("mouseenter", onEnterLevelEditArea)
-        levelsDiv.addEventListener("mouseleave", onExitLevelEditArea)
+        levelsDiv.addEventListener("mouseenter", onEnterLevelEditArea);
+        levelsDiv.addEventListener("mouseleave", onExitLevelEditArea);
+        document.querySelectorAll('input[name="output-cell-color-choice"]')
+            .forEach((node) => node.addEventListener("change", () => {
+                refreshPreview();
+            })
+        );
+        document.getElementById("global-glyph-color").addEventListener("change", () => {
+            const glyphColorChoice = document.querySelector('input[name="output-cell-color-choice"]:checked').value;
+            switch (glyphColorChoice) {
+                case null:
+                    console.warn("no output glyph color choice checked at draw time");
+                default:
+                    console.error(`unrecognized output color glyph choice \"${glyphColorChoice}\"`);
+                case "cell-mean":
+                    break;
+                case "global":
+                    refreshPreview();
+            }
+        });
 
         let timeout = false;
         window.addEventListener("resize", function () {
@@ -711,7 +730,7 @@
                 previewContext.canvas.width = 1;
                 refreshPreview();
             }, 100);
-        })
+        });
 
         for (const collapsible of document.getElementsByClassName("container-collapse")) {
             collapsible.addEventListener("click", (e) => {
@@ -756,7 +775,7 @@
     <canvas id="glyph-canvas" style="display: none;"></canvas>
     <div style="margin:2em;">
         <p>
-            Thank you for trying CookieCut in early stages :D
+            Thank you for trying CookieCut in its early stages :D
         </p>
     </div>
     <main>
@@ -822,6 +841,7 @@
             <label for="use-cell-mean">Use average tile color</label>
             <input type="radio" id="use-global-color" name="output-cell-color-choice" value="global" />
             <label for="use-global-color">Use global color</label>
+            <input type="color" id="global-glyph-color"/>
         </div>
         <div class="output-container control-container">
             <button type="button" class="container-collapse">Text output</button>
