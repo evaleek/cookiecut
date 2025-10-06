@@ -110,6 +110,11 @@
                     previewContext.canvas.height = imgWidth;
                     previewContext.canvas.width = imgHeight;
                 }
+                cc.drawBackground(
+                    previewContext,
+                    [imageMeans[0].length, imageMeans.length],
+                    document.querySelector('input[name="value-choice"]:checked').value
+                );
                 if (isEditingLevels) {
                     cc.drawValueDots(previewContext, imageMeans, getPixelValuer());
                 } else {
@@ -219,7 +224,7 @@
                 const check = document.querySelector('input[name="value-choice"]:checked').value;
                 switch (check) {
                     case "lights":
-                        ctx.fillStyle = 'black'; // TODO when backgrounds are set correctly
+                        ctx.fillStyle = 'white';
                         break;
                     case "darks":
                         ctx.fillStyle = 'black';
@@ -494,18 +499,32 @@
             const hoverHighlightColor = 'pink';
 
             const highlightCells = (c) => ((e) => {
-                if (imageMeans) cc.drawValueDots(
-                    previewContext,
-                    imageMeans,
-                    getPixelValuer(),
-                    null, [
-                        prevRange?.valueAsNumber ?? 0,
-                        e.target.valueAsNumber
-                    ], c
-                );
+                if (imageMeans) {
+                    cc.drawBackground(
+                        previewContext,
+                        [imageMeans[0].length, imageMeans.length],
+                        document.querySelector('input[name="value-choice"]:checked').value
+                    );
+                    cc.drawValueDots(
+                        previewContext,
+                        imageMeans,
+                        getPixelValuer(),
+                        null, [
+                            prevRange?.valueAsNumber ?? 0,
+                            e.target.valueAsNumber
+                        ], c
+                    );
+                }
             });
             const clearCells = () => {
-                if (imageMeans) cc.drawValueDots(previewContext, imageMeans, getPixelValuer())
+                if (imageMeans) {
+                    cc.drawBackground(
+                        previewContext,
+                        [imageMeans[0].length, imageMeans.length],
+                        document.querySelector('input[name="value-choice"]:checked').value
+                    );
+                    cc.drawValueDots(previewContext, imageMeans, getPixelValuer())
+                }
             };
             range.addEventListener("input", highlightCells(highlightColor));
             range.addEventListener("mousedown", highlightCells(highlightColor));

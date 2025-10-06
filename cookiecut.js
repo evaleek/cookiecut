@@ -78,6 +78,11 @@ const dctFragmentSource = (cellWidth, cellHeight) => `
     }
 `;
 
+export const defaultDarkEven = "rgb(4, 4, 4)";
+export const defaultDarkOdd = "rgb(16, 16, 16)";
+export const defaultLightEven = "rgb(252, 252, 252)";
+export const defaultLightOdd = "rgb(248, 248, 248)";
+
 export const edgeGlyphs = [
     '_',
     '-',
@@ -700,18 +705,47 @@ export function pixelToColor(rgba) {
     return (a==100) ? `rgb(${r} ${g} ${b})` : `rgb(${r} ${g} ${b} / ${a}%)`;
 }
 
+export function drawBackground(ctx, cellCount, valueChoice, backgroundColor) {
+    if (backgroundColor) {
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    } else {
+        let evenColor;
+        let oddColor;
+        switch (valueChoice) {
+            case "lights":
+                evenColor = defaultDarkEven;
+                oddColor = defaultDarkOdd;
+                break;
+            case "darks":
+                evenColor = defaultLightEven;
+                oddColor = defaultLightOdd;
+                break;
+            case null:
+                throw new Error("no value type checked at pixel valuation");
+            default:
+                throw new Error(`unrecognized pixel valuation \"${check}\"`);
+        }
+
+        const xStep = ctx.canvas.width / cellCount[0];
+        const yStep = ctx.canvas.height / cellCount[1];
+        ctx.fillStyle = evenColor;
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.fillStyle = oddColor;
+        for (let x = 0; x < cellCount[0]; x++) {
+            for (let y = 0; y < cellCount[1]; y++) {
+                if ((x+y)%2) ctx.rect(x*xStep, y*yStep, xStep, yStep);
+            }
+        }
+        ctx.fill();
+    }
+}
+
 export function drawValueDots(ctx, means, pixelValue, clearColor, interval, highlightColor) {
     const xStep = ctx.canvas.width / means[0].length;
     const yStep = ctx.canvas.height / means.length;
     const cellCoord = (r, c) => [xStep*0.5 + xStep*c, yStep*0.5 + yStep*r];
     const circleRadius = Math.min(xStep, yStep) * 0.5;
-
-    if (clearColor) {
-        tx.fillStyle = clearColor;
-        tx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    }
 
     if (highlightColor) ctx.strokeStyle = highlightColor;
 
