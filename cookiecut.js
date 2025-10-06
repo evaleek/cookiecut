@@ -804,6 +804,44 @@ export function drawValueDots(ctx, means, pixelValue, clearColor, interval, high
     }
 }
 
+export function drawOutput(ctx, means, glyphOutput, glyphColorChoice, globalColor) {
+    const height = glyphOutput.length;
+    const width = glyphOutput[0].length;
+    const xStep = ctx.canvas.width / width;
+    const yStep = ctx.canvas.height / height;
+    const xBase = xStep * 0.5;
+    const yBase = yStep * 0.5;
+
+    ctx.font = `${Math.min(xStep, yStep)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (const [cellY, row] of glyphOutput.entries()) {
+        for (const [cellX, glyph] of row.entries()) {
+            switch (glyphColorChoice) {
+                case null:
+                    console.warn("no output glyph color choice checked at draw time");
+                default:
+                    console.error(`unrecognized output color glyph choice \"${glyphColorChoice}\"`);
+                case "cell-mean":
+                    if (means) {
+                        ctx.fillStyle = pixelToColor(means[cellY][cellX].slice(0, 3));
+                    } else {
+                        console.warn("missing image means at output draw time");
+                        ctx.fillStyle = globalColor;
+                    }
+                    break;
+                case "global":
+                    ctx.fillStyle = globalColor;
+                    break;
+            }
+            const x = cellX * xStep + xBase;
+            const y = cellY * yStep + yBase;
+            ctx.fillText(glyph ?? ' ', x, y);
+        }
+    }
+}
+
 export function bucketCounts(pixels, bucketCount, pixelValue) {
     const buckets = Array(bucketCount).fill(0);
     for (const pixel of pixels) {

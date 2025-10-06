@@ -209,49 +209,13 @@
         }
 
         function drawOutput() {
-            const height = glyphOutput.length;
-            const width = glyphOutput[0].length;
-            const ctx = previewContext;
-            const xStep = ctx.canvas.width / width;
-            const yStep = ctx.canvas.height / height;
-            const xBase = xStep * 0.5;
-            const yBase = yStep * 0.5;
-
-            ctx.font = `${Math.min(xStep, yStep)}px monospace`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
             const globalColor = cc.pixelToColor(cc.colorInputToRGB(document.getElementById("global-glyph-color")));
-
             const glyphColorChoice = document.querySelector('input[name="output-cell-color-choice"]:checked').value;
-
             if (!imageMeans) {
                 console.error("missing image means at glyph draw time");
             }
 
-            for (const [cellY, row] of glyphOutput.entries()) {
-                for (const [cellX, glyph] of row.entries()) {
-                    switch (glyphColorChoice) {
-                        case null:
-                            console.warn("no output glyph color choice checked at draw time");
-                        default:
-                            console.error(`unrecognized output color glyph choice \"${glyphColorChoice}\"`);
-                        case "cell-mean":
-                            if (imageMeans) {
-                                ctx.fillStyle = cc.pixelToColor(imageMeans[cellY][cellX].slice(0, 3));
-                            } else {
-                                ctx.fillStyle = globalColor;
-                            }
-                            break;
-                        case "global":
-                            ctx.fillStyle = globalColor;
-                            break;
-                    }
-                    const x = cellX * xStep + xBase;
-                    const y = cellY * yStep + yBase;
-                    ctx.fillText(glyph ?? ' ', x, y);
-                }
-            }
+            cc.drawOutput(previewContext, imageMeans, glyphOutput, glyphColorChoice, globalColor);
         }
 
         function updateCellSizePreview(cellSize, cellCount) {
