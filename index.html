@@ -643,7 +643,6 @@
         document.getElementById("user-image-upload").addEventListener("change", onImageUpload);
         document.getElementById("subdivisions-input").addEventListener("input", onHoverCellSize);
         document.getElementById("subdivisions-input").addEventListener("change", onSetCellSize);
-        document.getElementById("process-output").addEventListener("click", refreshOutput);
 
         const addLevel = document.getElementById("add-level");
         const removeLevel = document.getElementById("remove-level");
@@ -656,7 +655,7 @@
         document.querySelectorAll('input[name="value-choice"]')
             .forEach((node) =>
                 node.addEventListener("change", onChangeValueChoice));
-        const levelsDiv = document.querySelector("div.levels-control-container");
+        const levelsDiv = document.querySelector("div.levels-control-subcontainer");
         levelsDiv.addEventListener("mouseenter", onEnterLevelEditArea)
         levelsDiv.addEventListener("mouseleave", onExitLevelEditArea)
 
@@ -669,6 +668,20 @@
                 refreshPreview();
             }, 100);
         })
+
+        for (const collapsible of document.getElementsByClassName("container-collapse")) {
+            collapsible.addEventListener("click", (e) => {
+                let content = e.target.nextElementSibling;
+                if (content.nodeName !== "DIV") {
+                    console.error("expected a collapsible div, found " + content.nodeName);
+                }
+                if (content.style.display === "block") {
+                    content.style.display = "none";
+                } else {
+                    content.style.display = "block";
+                }
+            });
+        }
 
         if (getMasks().length) {
             document.getElementById("remove-mask").disabled = false;
@@ -702,18 +715,44 @@
             Thank you for trying CookieCut in early stages :D
         </p>
     </div>
-    <main class="cookiecut">
-        <div class="preview-container">
-            <canvas id="preview-canvas"></canvas>
-        </div>
-        <div class="image-selection-control">
+    <main>
+        <div class="image-selection-control control-container">
             <div class="image-selection-control-header">
                 <input type="file" id="user-image-upload" accept="image/*" />
             </div>
             <img id="user-image">
         </div>
-        <div class="cookiecut-start-side">
-            <div class="levels-control-container">
+        <div class="control-tray">
+            <div class="subdiv-container control-container">
+                <div class="subdiv-display">
+                    <span class="cell-size-width-display"></span>
+                    <span class="cell-size-height-display"></span>
+                    <span class="cell-count-width-display"></span>
+                    <span class="cell-count-height-display"></span>
+                </div>
+                <input type="range" id="subdivisions-input" step="1" disabled />
+            </div>
+            <div class="value-choice-container control-container">
+                <input type="radio" id="value-lights-choice" name="value-choice" value="lights" checked />
+                <label for="value-lights-choice">Value lights</label>
+                <input type="radio" id="value-darks-choice" name="value-choice" value="darks" />
+                <label for="value-darks-choice">Value darks</label>
+            </div>
+        </div>
+        <div class="masks-container control-container">
+            <div id="masks-control">
+                <input type="button" id="remove-mask" value="Remove mask" />
+                <input type="button" id="add-mask" value="Add mask" />
+            </div>
+            <div id="masks">
+                <template id="mask-template">
+                    <input type="color" class="mask-color"/>
+                </template>
+            </div>
+        </div>
+        <div class="levels-control-container control-container">
+            <button type="button" class="container-collapse">Levels</button>
+            <div class="levels-control-subcontainer" style="display:none;">
                 <div id="levels-control">
                     <input type="button" id="remove-level" value="Remove level" />
                     <input type="button" id="add-level" value="Add level" />
@@ -731,38 +770,15 @@
                 <img id="level-histogram">
             </div>
         </div>
-        <div class="cookiecut-end-side">
-            <div class="subdiv-container">
-                <div class="subdiv-display">
-                    <span class="cell-size-width-display"></span>
-                    <span class="cell-size-height-display"></span>
-                    <span class="cell-count-width-display"></span>
-                    <span class="cell-count-height-display"></span>
-                </div>
-                <input type="range" id="subdivisions-input" step="1" disabled />
-            </div>
-            <div class="value-choice-container">
-                <input type="radio" id="value-lights-choice" name="value-choice" value="lights" checked />
-                <label for="value-lights-choice">Value lights</label>
-                <input type="radio" id="value-darks-choice" name="value-choice" value="darks" />
-                <label for="value-darks-choice">Value darks</label>
-            </div>
-            <div class="masks-container">
-                <div id="masks-control">
-                    <input type="button" id="remove-mask" value="Remove mask" />
-                    <input type="button" id="add-mask" value="Add mask" />
-                </div>
-                <div id="masks">
-                    <template id="mask-template">
-                        <input type="color" class="mask-color"/>
-                    </template>
-                </div>
+        <div class="preview-container">
+            <canvas id="preview-canvas"></canvas>
+        </div>
+        <div class="output-container control-container">
+            <button type="button" class="container-collapse">Text output</button>
+            <div class="output-subcontainer" style="display:none;">
+                <textarea id="output" readonly></textarea>
             </div>
         </div>
     </main>
-    <div class="output-container">
-        <input type="button" id="process-output" value="Process" />
-        <textarea id="output" readonly></textarea>
-    </div>
 </body>
 </html>
