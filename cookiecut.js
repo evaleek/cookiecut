@@ -98,7 +98,7 @@ export const edgeGlyphs = [
     ')',
     '!',
     '+',
-    '`'
+    //'`'
 ];
 
 export const alphabetLower = [
@@ -758,6 +758,20 @@ export function drawBackground(ctx, cellCount, valueChoice, backgroundColor) {
     }
 }
 
+export function rgbaToCanvasColor(color) {
+    const r = Math.floor(color[0]*255);
+    const g = Math.floor(color[1]*255);
+    const b = Math.floor(color[2]*255);
+    if (color.length == 4) {
+        const a = Math.floor(color[3]*255);
+        return (color[4]==1.0) ? `rgb(${r} ${g} ${b})` : `rgb(${r} ${g} ${b} / ${a}%)`;
+    } else if (color.length == 3) {
+        return `rgb(${r} ${g} ${b})`;
+    } else {
+        throw new Error("unrecognized color value " + color);
+    }
+}
+
 export function drawValueDots(ctx, means, pixelValue, clearColor, interval, highlightColor) {
     const xStep = ctx.canvas.width / means[0].length;
     const yStep = ctx.canvas.height / means.length;
@@ -772,16 +786,7 @@ export function drawValueDots(ctx, means, pixelValue, clearColor, interval, high
             const [x, y] = cellCoord(rowIdx, colIdx);
             const r = value * circleRadius;
 
-            ctx.fillStyle = (pixel[4]==1.0)
-                ? `rgb(
-                    ${Math.floor(pixel[0]*255)}
-                    ${Math.floor(pixel[1]*255)}
-                    ${Math.floor(pixel[2]*255)})`
-                : `rgb(
-                    ${Math.floor(pixel[0]*255)}
-                    ${Math.floor(pixel[1]*255)}
-                    ${Math.floor(pixel[2]*255)}
-                    / ${Math.floor(pixel[3]*100)}%)`;
+            ctx.fillStyle = rgbaToCanvasColor(pixel);
 
             if (interval && value > interval[0] && value <= interval[1]) {
                 const selectValue = Math.min(1, value*1.12);

@@ -113,7 +113,8 @@
                 cc.drawBackground(
                     previewContext,
                     [imageMeans[0].length, imageMeans.length],
-                    document.querySelector('input[name="value-choice"]:checked').value
+                    document.querySelector('input[name="value-choice"]:checked').value,
+                    getBackgroundColor()
                 );
                 if (isEditingLevels) {
                     cc.drawValueDots(previewContext, imageMeans, getPixelValuer());
@@ -462,6 +463,21 @@
             }));
         }
 
+        function getBackgroundColor() {
+            const check = document.querySelector('input[name="output-background-color-choice"]:checked').value;
+            switch (check) {
+                case null:
+                default:
+                    console.error("invalid background color choice value: " + check);
+                case "none":
+                    return null;
+                case "solid":
+                    return cc.rgbaToCanvasColor(
+                        cc.colorInputToRGB(
+                            document.getElementById("solid-color-background")));
+            }
+        }
+
         function getMasks() {
             return Array.from(document.getElementById("masks").children)
                 .filter((element) => element.classList.contains("mask"))
@@ -513,7 +529,8 @@
                     cc.drawBackground(
                         previewContext,
                         [imageMeans[0].length, imageMeans.length],
-                        document.querySelector('input[name="value-choice"]:checked').value
+                        document.querySelector('input[name="value-choice"]:checked').value,
+                        getBackgroundColor()
                     );
                     cc.drawValueDots(
                         previewContext,
@@ -531,7 +548,8 @@
                     cc.drawBackground(
                         previewContext,
                         [imageMeans[0].length, imageMeans.length],
-                        document.querySelector('input[name="value-choice"]:checked').value
+                        document.querySelector('input[name="value-choice"]:checked').value,
+                        getBackgroundColor()
                     );
                     cc.drawValueDots(previewContext, imageMeans, getPixelValuer())
                 }
@@ -721,6 +739,13 @@
                     refreshPreview();
             }
         });
+        document.querySelectorAll('input[name="output-background-color-choice"]')
+            .forEach((node) => node.addEventListener("change", () => {
+                refreshPreview();
+            }));
+        document.getElementById("solid-color-background").addEventListener("change", () => {
+            refreshPreview();
+        });
 
         let timeout = false;
         window.addEventListener("resize", function () {
@@ -837,11 +862,20 @@
             <canvas id="preview-canvas"></canvas>
         </div>
         <div class="output-config control-container">
-            <input type="radio" id="use-cell-mean" name="output-cell-color-choice" value="cell-mean" checked />
-            <label for="use-cell-mean">Use average tile color</label>
-            <input type="radio" id="use-global-color" name="output-cell-color-choice" value="global" />
-            <label for="use-global-color">Use global color</label>
-            <input type="color" id="global-glyph-color"/>
+            <div class="glyph-color-config-control">
+                <input type="radio" id="use-cell-mean" name="output-cell-color-choice" value="cell-mean" checked />
+                <label for="use-cell-mean">Use average tile color</label>
+                <input type="radio" id="use-global-color" name="output-cell-color-choice" value="global" />
+                <label for="use-global-color">Use global color</label>
+                <input type="color" id="global-glyph-color"/>
+            </div>
+            <div class="background-color-config-control">
+                <input type="radio" id="no-background-color" name="output-background-color-choice" value="none" checked />
+                <label for="no-background-color">No background</label>
+                <input type="radio" id="solid-background-color" name="output-background-color-choice" value="solid" />
+                <label for="solid-background-color">Solid color background</label>
+                <input type="color" id="solid-color-background"/>
+            </div>
         </div>
         <div class="output-container control-container">
             <button type="button" class="container-collapse">Text output</button>
