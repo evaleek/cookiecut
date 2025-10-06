@@ -197,19 +197,13 @@ export const strongGlyphs = [
     '%',
     '$',
     '@',
-];
-
-export const solidGlyphs = [
-    '#'
+    '#',
 ];
 
 export const defaultTileset = [
     [],
-    [],
     weakGlyphs,
-    edgeGlyphs.concat(middleGlyphs),
-    edgeGlyphs.concat(strongGlyphs, alphabetLower, alphabetUpper, numerals),
-    solidGlyphs
+    edgeGlyphs.concat(middleGlyphs, strongGlyphs, alphabetLower, alphabetUpper, numerals),
 ];
 
 export const glyphPxMinimum = 8;
@@ -225,6 +219,11 @@ export const isCellSize = (cellSize) => (
 );
 
 export const colorDistance = (a, b) => Math.hypot(...(a.map((aC, i) => aC - b[i])));
+
+export const dctDistance = (a, b) => {
+    const multiBase = Math.abs(a[0][0] - b[0][0]) * (a.length/2);
+    return dctLowFreqDistance(a, b) + multiBase;
+}
 
 export const dctGradientDistance = (a, b) => {
     const maxRow = a.length - 1;
