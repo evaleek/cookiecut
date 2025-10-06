@@ -311,7 +311,7 @@
                 subdivInput.max = -minCellSize;
                 subdivInput.min = -maxCellSize;
 
-                subdivInput.valueAsNumber = -cc.glyphPxMaximum;
+                subdivInput.valueAsNumber = -cc.glyphPxMinimum;
 
                 const cellSize = computeCellSize(-subdivInput.valueAsNumber);
                 const cellCount = getCellCount(cellSize, fullImage);
