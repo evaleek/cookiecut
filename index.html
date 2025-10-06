@@ -278,6 +278,9 @@
 
                 subdivInput.valueAsNumber = -cc.glyphPxMinimum;
 
+                document.getElementById("output-width-config").placeholder = w;
+                document.getElementById("output-height-config").placeholder = h;
+
                 const cellSize = computeCellSize(-subdivInput.valueAsNumber);
                 const cellCount = getCellCount(cellSize, fullImage);
 
@@ -291,6 +294,9 @@
             } else {
                 image = null;
                 fullImage = null;
+
+                document.getElementById("output-width-config").placeholder = null;
+                document.getElementById("output-height-config").placeholder = null;
 
                 subdivInput.disabled = true;
             }
@@ -714,6 +720,34 @@
             refreshPreview();
         });
 
+        document.getElementById("output-width-config").addEventListener("input", (e) => {
+            const lockAspect = document.getElementById("output-lock-aspect-config").checked;
+            if (lockAspect && fullImage) {
+                if (e.target.value.length) {
+                    const aspect = fullImage.size[1] / fullImage.size[0];
+                    const inputWidth = Math.round(parseInt(e.target.value, 10));
+                    document.getElementById("output-height-config").value = Math.max(1, Math.round(aspect*inputWidth));
+                } else {
+                    document.getElementById("output-height-config").value = "";
+                }
+            }
+        });
+        document.getElementById("output-height-config").addEventListener("input", (e) => {
+            const lockAspect = document.getElementById("output-lock-aspect-config").checked;
+            if (lockAspect && fullImage) {
+                if (e.target.value.length) {
+                    const aspect = fullImage.size[0] / fullImage.size[1];
+                    const inputHeight = Math.round(parseInt(e.target.value, 10));
+                    document.getElementById("output-width-config").value = Math.max(1, Math.round(aspect*inputHeight));
+                } else {
+                    document.getElementById("output-width-config").value = "";
+                }
+            }
+        });
+        document.getElementById("output-lock-aspect-config").addEventListener("change", () => {
+            document.getElementById("output-width-config").dispatchEvent(new Event("input"));
+        });
+
         let timeout = false;
         window.addEventListener("resize", function () {
             clearTimeout(timeout);
@@ -845,6 +879,24 @@
             </div>
         </div>
         <div class="output-container control-container">
+            <div class="make-output-container">
+                <button type="button" class="make-output">Draw output to new tab</button>
+                <input type="number"
+                    id="output-width-config"
+                    min=1
+                    step=1
+                    size=6
+                />
+                &times
+                <input type="number"
+                    id="output-height-config"
+                    min=1
+                    step=1
+                    size=6
+                />
+                <input type="checkbox" id="output-lock-aspect-config" checked />
+                <label for="output-lock-aspect-config">Lock aspect ratio</label>
+            </div>
             <button type="button" class="container-collapse">Text output</button>
             <div class="output-subcontainer" style="display:none;">
                 <textarea id="output" readonly></textarea>
