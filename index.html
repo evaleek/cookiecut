@@ -205,17 +205,17 @@
             output.cols = glyphOutput[0].length;
             output.value = glyphOutput.map((row) => row.join('')).join('\n');
 
-            drawOutput();
+            drawOutput(previewContext);
         }
 
-        function drawOutput() {
+        function drawOutput(context) {
             const globalColor = cc.pixelToColor(cc.colorInputToRGB(document.getElementById("global-glyph-color")));
             const glyphColorChoice = document.querySelector('input[name="output-cell-color-choice"]:checked').value;
             if (!imageMeans) {
                 console.error("missing image means at glyph draw time");
             }
 
-            cc.drawOutput(previewContext, imageMeans, glyphOutput, glyphColorChoice, globalColor);
+            cc.drawOutput(context, imageMeans, glyphOutput, glyphColorChoice, globalColor);
         }
 
         function updateCellSizePreview(cellSize, cellCount) {
@@ -748,6 +748,27 @@
             document.getElementById("output-width-config").dispatchEvent(new Event("input"));
         });
 
+        document.getElementById("make-output-button").addEventListener("click", () => {
+            glyphContext.canvas.width = parseInt(document.getElementById("output-width-config").value) ?? fullImage.size[0];
+            glyphContext.canvas.height = parseInt(document.getElementById("output-height-config").value) ?? fullImage.size[1];
+            const backgroundColor = getBackgroundColor();
+            if (backgroundColor) {
+                cc.drawBackground(
+                    glyphContext,
+                    [imageMeans[0].length, imageMeans.length],
+                    document.querySelector('input[name="value-choice"]:checked').value,
+                    backgroundColor
+                );
+            } else {
+                glyphContext.globalAlpha = 0.0;
+                glyphContext.clearRect(0, 0, glyphContext.canvas.width, glyphContext.canvas.height);
+                glyphContext.globalAlpha = 1.0;
+            }
+            drawOutput(glyphContext);
+
+            window.open(glyphContext.canvas.toDataURL(), 'about:blank');
+        });
+
         let timeout = false;
         window.addEventListener("resize", function () {
             clearTimeout(timeout);
@@ -880,7 +901,7 @@
         </div>
         <div class="output-container control-container">
             <div class="make-output-container">
-                <button type="button" class="make-output">Draw output to new tab</button>
+                <button type="button" id="make-output-button">Draw output to new tab</button>
                 <input type="number"
                     id="output-width-config"
                     min=1
