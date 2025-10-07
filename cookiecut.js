@@ -584,7 +584,7 @@ export function computeGlyphDcts(context, cellSize, valueCheck, characters, glyp
 
     ctx.canvas.width = size[0];
     ctx.canvas.height = size[1];
-    ctx.font = `${Math.min(...cellSize)}px monospace`;
+    ctx.font = `bold ${Math.min(...cellSize)}px/1.2 monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     switch (valueCheck) {
@@ -651,7 +651,7 @@ export function glyphDataUrl(character, cellSize, color, glyphDrawingContext) {
 
     ctx.canvas.width = cellSize[0];
     ctx.canvas.height = cellSize[1];
-    ctx.font = `${Math.min(...cellSize)}px monospace`;
+    ctx.font = `bold ${Math.min(...cellSize)}px/1.2 monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.clearRect(0, 0, cellSize[0], cellSize[1]);
@@ -674,7 +674,7 @@ export function glyphDataUrls(characters, cellSize, color, glyphDrawingContext) 
 
     ctx.canvas.width = cellSize[0];
     ctx.canvas.height = cellSize[1];
-    ctx.font = `${Math.min(...cellSize)}px monospace`;
+    ctx.font = `bold ${Math.min(...cellSize)}px/1.2 monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
@@ -694,7 +694,7 @@ export function setGlyphImgs(glyphs, cellSize, color, glyphDrawingContext) {
 
     ctx.canvas.width = cellSize[0];
     ctx.canvas.height = cellSize[1];
-    ctx.font = `${Math.min(...cellSize)}px monospace`;
+    ctx.font = `bold ${Math.min(...cellSize)}px/1.2 monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
@@ -812,7 +812,7 @@ export function drawOutput(ctx, means, glyphOutput, glyphColorChoice, globalColo
     const xBase = xStep * 0.5;
     const yBase = yStep * 0.5;
 
-    ctx.font = `${Math.min(xStep, yStep)}px monospace`;
+    ctx.font = `bold ${Math.min(xStep, yStep)}px/1.2 monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
