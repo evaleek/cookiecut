@@ -339,8 +339,8 @@
                 image = null;
                 fullImage = null;
 
-                document.getElementById("output-width-config").placeholder = null;
-                document.getElementById("output-height-config").placeholder = null;
+                document.getElementById("output-width-config").placeholder = '';
+                document.getElementById("output-height-config").placeholder = '';
 
                 subdivInput.disabled = true;
             }
@@ -830,8 +830,8 @@
         });
 
         document.getElementById("make-output-button").addEventListener("click", () => {
-            glyphContext.canvas.width = parseInt(document.getElementById("output-width-config").value) ?? fullImage.size[0];
-            glyphContext.canvas.height = parseInt(document.getElementById("output-height-config").value) ?? fullImage.size[1];
+            glyphContext.canvas.width = parseInt(document.getElementById("output-width-config").value) || fullImage.size[0];
+            glyphContext.canvas.height = parseInt(document.getElementById("output-height-config").value) || fullImage.size[1];
             const backgroundColor = getBackgroundColor();
             if (backgroundColor) {
                 cc.drawBackground(
