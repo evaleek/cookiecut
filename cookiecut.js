@@ -220,7 +220,7 @@ export const isCellSize = (cellSize) => (
 export const colorDistance = (a, b) => Math.hypot(...(a.map((aC, i) => aC - b[i])));
 
 export const dctDistance = (a, b) => {
-    const multiBase = Math.abs(a[0][0] - b[0][0]) * (a.length/2);
+    const multiBase = Math.abs(a[0][0] - b[0][0]) * (a.length/4);
     return dctLowDiagonalDistance(a, b) + multiBase;
 }
 

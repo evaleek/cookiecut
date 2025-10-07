@@ -457,6 +457,36 @@
                 }));
         }
 
+        function onAddOverlay() {
+            const overlay = document.createElement("div");
+            overlay.classList.add("overlay");
+            overlay.append(document.getElementById("overlay-template")
+                .content.cloneNode(true));
+
+            overlay.querySelector(".overlay-input").addEventListener("change", onChangeOverlays);
+            overlay.querySelector(".overlay-xpos").addEventListener("change", onChangeOverlays);
+            overlay.querySelector(".overlay-ypos").addEventListener("change", onChangeOverlays);
+
+            document.getElementById("overlays").appendChild(overlay);
+        }
+
+        function onRemoveOverlay() {
+            const overlayNodes = Array.from(document.getElementById("overlays").children)
+                .filter((element) => element.classList.contains("overlay"));
+            if (overlayNodes.length > 0) {
+                document.getElementById("overlays").removeChild(overlayNodes.at(-1));
+            } else {
+                console.error(`invalid overlay removal for ${overlayNodes.length} overlays`);
+            }
+        }
+
+        function onChangeOverlays() {
+            const overlayNodes = Array.from(document.getElementById("overlays").children)
+                .filter((element) => element.classList.contains("overlay"));
+            document.getElementById("remove-overlay").disabled =
+                (overlayNodes.length) ? false : true;
+        }
+
         function onAddLevel() {
             const level = document.createElement("div");
             level.classList.add("level");
@@ -720,6 +750,11 @@
             refreshPreview();
         });
 
+        document.getElementById("remove-overlay").addEventListener("click", onRemoveOverlay);
+        document.getElementById("remove-overlay").addEventListener("click", onChangeOverlays);
+        document.getElementById("add-overlay").addEventListener("click", onAddOverlay);
+        document.getElementById("add-overlay").addEventListener("click", onChangeOverlays);
+
         document.getElementById("output-width-config").addEventListener("input", (e) => {
             const lockAspect = document.getElementById("output-lock-aspect-config").checked;
             if (lockAspect && fullImage) {
@@ -814,6 +849,7 @@
             }
         }
         onChangeLevels();
+        onChangeOverlays();
 
         clearOutput();
         onImageUpload();
@@ -878,6 +914,22 @@
                     </template>
                 </div>
                 <img id="level-histogram">
+            </div>
+        </div>
+        <div class="overlay-control-container control-container">
+            <button type="button" class="container-collapse">Overlays</button>
+            <div class="overlay-control-subcontainer" style="display:none;">
+                <div id="overlay-control">
+                    <input type="button" id="remove-overlay" value="Remove overlay" />
+                    <input type="button" id="add-overlay" value="Add overlay" />
+                </div>
+                <div id="overlays">
+                    <template id="overlay-template">
+                        <input type="number" class="overlay-pos overlay-xpos" min=0 step=1 />
+                        <input type="number" class="overlay-pos overlay-ypos" min=0 step=1 />
+                        <textarea class="overlay-input"></textarea>
+                    </template>
+                </div>
             </div>
         </div>
         <div class="preview-container">
