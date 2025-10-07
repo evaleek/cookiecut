@@ -804,7 +804,7 @@ export function drawValueDots(ctx, means, pixelValue, clearColor, interval, high
     }
 }
 
-export function drawOutput(ctx, means, glyphOutput, glyphColorChoice, globalColor) {
+export function drawOutput(ctx, means, glyphOutput, glyphOverlays, glyphColorChoice, globalColor) {
     const height = glyphOutput.length;
     const width = glyphOutput[0].length;
     const xStep = ctx.canvas.width / width;

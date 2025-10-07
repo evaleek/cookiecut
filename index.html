@@ -203,7 +203,7 @@
             const output = document.getElementById("output");
             output.rows = glyphOutput.length;
             output.cols = glyphOutput[0].length;
-            output.value = glyphOutput.map((row) => row.join('')).join('\n');
+            output.value = glyphOutputWithOverlays().map((row) => row.join('')).join('\n');
 
             drawOutput(previewContext);
         }
@@ -215,7 +215,51 @@
                 console.error("missing image means at glyph draw time");
             }
 
-            cc.drawOutput(context, imageMeans, glyphOutput, glyphColorChoice, globalColor);
+            cc.drawOutput(
+                context,
+                imageMeans,
+                glyphOutput,
+                getGlyphOverlays(),
+                glyphColorChoice,
+                globalColor
+            );
+        }
+
+        function glyphOutputWithOverlays() {
+            if (!glyphOutput) return undefined;
+            let newOutput = structuredClone(glyphOutput);
+            for (const overlay of getGlyphOverlays()) {
+                for (const [yOffset, line] of overlay.characters.entries()) {
+                    const y = overlay.position[1] + yOffset;
+                    if (y < newOutput.length) {
+                        const xOffset = overlay.position[0];
+                        let x = xOffset;
+                        let cursor = 0;
+                        while ((x<newOutput[y].length) && cursor<line.length) {
+                            if (line[cursor]) {
+                                newOutput[y][x] = line[cursor];
+                            }
+                            x++;
+                            cursor++;
+                        }
+                    }
+                }
+            }
+            return newOutput;
+        }
+
+        function getGlyphOverlays() {
+            return Array.from(document.getElementById("overlays").children)
+                .filter((element) => element.classList.contains("overlay"))
+                .map((div) => ({
+                    characters: div.querySelector(".overlay-input").value
+                        .split('\n').map((line) => line.split('')
+                            .map((c) => ((c==' ') ? null : c))),
+                    position: [
+                        div.querySelector(".overlay-xpos").valueAsNumber || 0,
+                        div.querySelector(".overlay-ypos").valueAsNumber || 0
+                    ]
+                }));
         }
 
         function updateCellSizePreview(cellSize, cellCount) {
@@ -463,7 +507,7 @@
             overlay.append(document.getElementById("overlay-template")
                 .content.cloneNode(true));
 
-            overlay.querySelector(".overlay-input").addEventListener("change", onChangeOverlays);
+            overlay.querySelector(".overlay-input").addEventListener("input", onChangeOverlays);
             overlay.querySelector(".overlay-xpos").addEventListener("change", onChangeOverlays);
             overlay.querySelector(".overlay-ypos").addEventListener("change", onChangeOverlays);
 
@@ -485,6 +529,8 @@
                 .filter((element) => element.classList.contains("overlay"));
             document.getElementById("remove-overlay").disabled =
                 (overlayNodes.length) ? false : true;
+
+            refreshPreview();
         }
 
         function onAddLevel() {
@@ -925,8 +971,18 @@
                 </div>
                 <div id="overlays">
                     <template id="overlay-template">
-                        <input type="number" class="overlay-pos overlay-xpos" min=0 step=1 />
-                        <input type="number" class="overlay-pos overlay-ypos" min=0 step=1 />
+                        <input type="number"
+                            class="overlay-pos overlay-xpos"
+                            placeholder=0
+                            min=0
+                            step=1
+                        />
+                        <input type="number"
+                            class="overlay-pos overlay-ypos"
+                            placeholder=0
+                            min=0
+                            step=1
+                        />
                         <textarea class="overlay-input"></textarea>
                     </template>
                 </div>
