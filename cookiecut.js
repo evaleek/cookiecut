@@ -816,28 +816,51 @@ export function drawOutput(ctx, means, glyphOutput, glyphOverlays, glyphColorCho
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    for (const [cellY, row] of glyphOutput.entries()) {
-        for (const [cellX, glyph] of row.entries()) {
-            switch (glyphColorChoice) {
-                case null:
-                    console.warn("no output glyph color choice checked at draw time");
-                default:
-                    console.error(`unrecognized output color glyph choice \"${glyphColorChoice}\"`);
-                case "cell-mean":
-                    if (means) {
-                        ctx.fillStyle = pixelToColor(means[cellY][cellX].slice(0, 3));
-                    } else {
-                        console.warn("missing image means at output draw time");
-                        ctx.fillStyle = globalColor;
+    let newMeans = structuredClone(means);
+    let newOutput = structuredClone(glyphOutput);
+
+    for (const overlay of glyphOverlays) {
+        for (const [yOffset, line] of overlay.characters.entries()) {
+            const y = overlay.position[1] + yOffset;
+            if (y < newOutput.length) {
+                const xOffset = overlay.position[0];
+                let x = xOffset;
+                let cursor = 0;
+                while ((x<newOutput[y].length) && cursor<line.length) {
+                    if (line[cursor]) {
+                        newOutput[y][x] = line[cursor];
+                        newMeans[y][x] = null;
                     }
-                    break;
-                case "global":
-                    ctx.fillStyle = globalColor;
-                    break;
+                    x++;
+                    cursor++;
+                }
             }
-            const x = cellX * xStep + xBase;
-            const y = cellY * yStep + yBase;
-            ctx.fillText(glyph ?? ' ', x, y);
+        }
+    }
+
+    for (const [cellY, row] of newOutput.entries()) {
+        for (const [cellX, glyph] of row.entries()) {
+            if (glyph) {
+                switch (glyphColorChoice) {
+                    case null:
+                        console.warn("no output glyph color choice checked at draw time");
+                    default:
+                        console.error(`unrecognized output color glyph choice \"${glyphColorChoice}\"`);
+                    case "cell-mean":
+                        if (newMeans && newMeans[cellY][cellX]) {
+                            ctx.fillStyle = pixelToColor(newMeans[cellY][cellX].slice(0, 3));
+                        } else {
+                            ctx.fillStyle = globalColor;
+                        }
+                        break;
+                    case "global":
+                        ctx.fillStyle = globalColor;
+                        break;
+                }
+                const x = cellX * xStep + xBase;
+                const y = cellY * yStep + yBase;
+                ctx.fillText(glyph, x, y);
+            }
         }
     }
 }

@@ -508,8 +508,8 @@
                 .content.cloneNode(true));
 
             overlay.querySelector(".overlay-input").addEventListener("input", onChangeOverlays);
-            overlay.querySelector(".overlay-xpos").addEventListener("change", onChangeOverlays);
-            overlay.querySelector(".overlay-ypos").addEventListener("change", onChangeOverlays);
+            overlay.querySelector(".overlay-xpos").addEventListener("input", onChangeOverlays);
+            overlay.querySelector(".overlay-ypos").addEventListener("input", onChangeOverlays);
 
             document.getElementById("overlays").appendChild(overlay);
         }
